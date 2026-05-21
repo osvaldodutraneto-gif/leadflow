@@ -1025,8 +1025,10 @@ function initApp(){
     document.getElementById('nav-team').style.display='flex';
     document.getElementById('nav-valores').style.display='flex';
   } else {
-    // Comercial também tem dashboard
+    // Comercial: só Dashboard, sem Equipe e sem Valores Base
     document.getElementById('nav-dash').style.display='flex';
+    document.getElementById('nav-team').style.display='none';
+    document.getElementById('nav-valores').style.display='none';
   }
   document.getElementById('opt-mentoria').style.display='';
   const t=document.body.getAttribute('data-theme');
@@ -1039,6 +1041,8 @@ function initApp(){
 // NAVIGATION
 // ════════════════════════════════════
 function showView(v,el){
+  // Comercial não acessa valores e equipe
+  if(S.role==='comercial' && (v==='valores'||v==='team')) return;
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   if(el)el.classList.add('active');
   document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
@@ -1547,28 +1551,28 @@ async function renderDashboard(){
   if(dashFilter!=='todos') leads=leads.filter(l=>(l.type||'procedimento')===dashFilter);
   leads=filterByPeriod(leads);
 
-  // All leads today (unfiltered by type for "hoje" counter)
-  const hjAll=filterByPeriod(getLeads()).filter(l=>new Date(l.createdAt).toDateString()===hoje).length;
+  // All leads today (unfiltered por tipo — precisa de await)
+  const allLeadsRaw = await getLeads();
+  const hjAll=filterByPeriod(allLeadsRaw).filter(l=>new Date(l.createdAt||l.created_at).toDateString()===hoje).length;
 
   const total=leads.length;
-  const fechados=leads.filter(l=>l.stage==='fechado').length;
-  const perdidos=leads.filter(l=>['demitido','recusado'].includes(l.stage)).length;
-  const conv=total>0?Math.round(fechados/total*100):0;
+  const confirmados=leads.filter(l=>l.stage==='confirmado').length;
+  const conv=total>0?Math.round(confirmados/total*100):0;
   const fuCount=leads.filter(l=>l.stage==='followup').length;
 
   // Potencial Inicial = soma dos procedimentos selecionados pelos leads ativos
-  const activeStages=['novo','contato','followup','consulta','orcamento','proposta'];
+  const activeStages=['novo','contato','followup','consulta','proposta'];
   const activeLeads=leads.filter(l=>activeStages.includes(l.stage));
   const potInicialTotal=activeLeads.reduce((s,l)=>s+(l.potencialInicial||0),0);
 
-  // Potencial Real = ticket médio × leads que chegaram em Consulta Agendada (ou além)
-  const consultaStages=['consulta','orcamento','fechado'];
+  // Potencial Real = ticket médio × leads que chegaram em Consulta Agendada (ou confirmado)
+  const consultaStages=['consulta','confirmado'];
   const leadsComConsulta=leads.filter(l=>consultaStages.includes(l.stage)||l.consultaResult==='sim');
   const ticketRef=dashFilter==='mentoria'?tickets.ment:tickets.proc;
   const potReal=ticketRef>0?leadsComConsulta.length*ticketRef:0;
 
-  // Receita fechada real
-  const rec=leads.filter(l=>l.stage==='fechado'&&l.value).reduce((s,l)=>s+parseFloat(l.value||0),0);
+  // Receita: não temos mais campo value — usar potencialInicial dos confirmados como proxy
+  const rec=leads.filter(l=>l.stage==='confirmado').reduce((s,l)=>s+(l.potencialInicial||0),0);
 
   // Origins
   const oriCnt={};
@@ -1590,7 +1594,7 @@ async function renderDashboard(){
   leads.forEach(l=>{
     if(!l.att)return;
     attCnt[l.att]=(attCnt[l.att]||0)+1;
-    if(l.stage==='fechado')attFch[l.att]=(attFch[l.att]||0)+1;
+    if(l.stage==='confirmado')attFch[l.att]=(attFch[l.att]||0)+1;
   });
   const attList=Object.entries(attCnt).sort((a,b)=>b[1]-a[1]).slice(0,5);
   const maxAtt=attList[0]?.[1]||1;
@@ -1617,8 +1621,8 @@ async function renderDashboard(){
         <div class="ds-delta">+${hjAll} hoje</div>
       </div>
       <div class="dash-stat">
-        <div class="ds-val" style="color:var(--green)">${fechados}</div>
-        <div class="ds-lbl">Fechados</div>
+        <div class="ds-val" style="color:var(--green)">${confirmados}</div>
+        <div class="ds-lbl">Confirmados</div>
         <div class="ds-delta">${conv}% conversão</div>
       </div>
       <div class="dash-stat">
