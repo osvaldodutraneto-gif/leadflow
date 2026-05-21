@@ -521,9 +521,10 @@ input,select,textarea,button{font-family:var(--font-body)}
         <span id="follow-alert-text"></span>
       </div>
       <div class="kanban-filters">
-        <button class="kf-btn active" onclick="setKanbanFilter('todos',this)">Todos</button>
-        <button class="kf-btn" onclick="setKanbanFilter('procedimento',this)">Procedimentos</button>
-        <button class="kf-btn" onclick="setKanbanFilter('mentoria',this)">Mentoria</button>
+        <button class="kf-btn active" data-kf onclick="setKanbanFilter('todos',this)">Todos</button>
+        <button class="kf-btn" data-kf onclick="setKanbanFilter('procedimento',this)">Procedimentos</button>
+        <button class="kf-btn" data-kf onclick="setKanbanFilter('mentoria',this)">Mentoria</button>
+        <div id="kanban-month-selector" style="display:inline-flex;align-items:center"></div>
       </div>
       <div class="kanban-board" id="kanban-board"></div>
     </div>
@@ -748,8 +749,9 @@ const STAGES_PROC = [
   {id:'followup',   label:'Follow Up',         color:'#A87ED4'},
   {id:'consulta',   label:'Consulta Agendada', color:'#4CAF7D'},
   {id:'confirmado', label:'Confirmado',        color:'#2D7A4F'},
+  {id:'demitido',   label:'Demitido',          color:'#B03A2E'},
 ];
-const STAGES_PROC_COM = STAGES_PROC; // Mesmos para todos
+const STAGES_PROC_COM = STAGES_PROC;
 const STAGES_PROC_ADM = STAGES_PROC;
 const STAGES_MENT = [
   {id:'novo',       label:'Novo Lead',         color:'#6BA3D6'},
@@ -757,6 +759,7 @@ const STAGES_MENT = [
   {id:'followup',   label:'Follow Up',         color:'#A87ED4'},
   {id:'proposta',   label:'Proposta Enviada',  color:'#C4A97D'},
   {id:'confirmado', label:'Confirmado',        color:'#2D7A4F'},
+  {id:'demitido',   label:'Demitido',          color:'#B03A2E'},
 ];
 // Kanban "Todos" — view unificada
 const STAGES_TODOS = [
@@ -766,6 +769,7 @@ const STAGES_TODOS = [
   {id:'consulta',   label:'Consulta Agendada', color:'#4CAF7D'},
   {id:'proposta',   label:'Proposta',          color:'#C4A97D'},
   {id:'confirmado', label:'Confirmado ✓',      color:'#2D7A4F'},
+  {id:'demitido',   label:'Demitido',          color:'#B03A2E'},
 ];
 
 const ORIGINS = {
@@ -785,6 +789,7 @@ let S = null; // session
 let editId = null;
 let editUserId = null;
 let kanbanFilter = 'todos'; // 'todos' | 'procedimento' | 'mentoria'
+let kanbanMonth = 'todos'; // 'todos' | 'YYYY-MM'
 let dashFilter = 'todos';
 let dashPeriod = 'mes';
 
@@ -824,9 +829,32 @@ function filterByPeriod(leads){
 
 function setKanbanFilter(f, el){
   kanbanFilter = f;
-  document.querySelectorAll('.kf-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.kf-btn[data-kf]').forEach(b=>b.classList.remove('active'));
   if(el) el.classList.add('active');
   renderKanban();
+}
+
+function setKanbanMonth(val){
+  kanbanMonth = val;
+  renderKanban();
+}
+
+function buildMonthSelector(leads){
+  // Coletar meses únicos dos leads
+  const months = {};
+  leads.forEach(l=>{
+    const d = new Date(l.createdAt||l.created_at);
+    if(isNaN(d)) return;
+    const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    const label = d.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+    months[key] = label.charAt(0).toUpperCase()+label.slice(1);
+  });
+  const sorted = Object.entries(months).sort((a,b)=>b[0].localeCompare(a[0]));
+  const opts = sorted.map(([k,v])=>`<option value="${k}" ${kanbanMonth===k?'selected':''}>${v}</option>`).join('');
+  return `<select class="kf-select" onchange="setKanbanMonth(this.value)" style="padding:6px 10px;border-radius:20px;border:1px solid var(--border2);background:var(--surface2);color:var(--text2);font-size:12px;font-weight:600;cursor:pointer;font-family:var(--font-body);outline:none">
+    <option value="todos" ${kanbanMonth==='todos'?'selected':''}>Todos os meses</option>
+    ${opts}
+  </select>`;
 }
 
 // ── Procedimentos e Mentorias defaults ──
@@ -1078,6 +1106,22 @@ async function renderKanban(){
 
   // Type filter
   if(kanbanFilter!=='todos') leads=leads.filter(l=>(l.type||'procedimento')===kanbanFilter);
+
+  // Month filter
+  if(kanbanMonth!=='todos'){
+    leads=leads.filter(l=>{
+      const d=new Date(l.createdAt||l.created_at);
+      if(isNaN(d)) return true;
+      const key=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+      return key===kanbanMonth;
+    });
+  }
+
+  // Renderizar seletor de mês (precisa dos leads antes do filtro de mês para mostrar todos os meses)
+  const allLeadsForMonths = await getLeads();
+  document.getElementById('kanban-month-selector').innerHTML = buildMonthSelector(
+    S.role==='comercial' ? allLeadsForMonths.filter(l=>l.att===S.display) : allLeadsForMonths
+  );
 
   // Follow up alert
   const allLeads=await getLeads();
@@ -1442,7 +1486,7 @@ async function openDetail(id){
     ${l.obs?`<div style="margin-top:12px"><div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">Observações</div><div style="background:var(--surface2);border-radius:var(--radius-xs);padding:10px 12px;font-size:12px;color:var(--text2);line-height:1.5">${l.obs}</div></div>`:''}
   `;
   const nextStage=getNextStage(l);
-  const canAdvance=nextStage&&!(S.role==='comercial'&&['orcamento','demitido','recusado'].includes(nextStage.id));
+  const canAdvance=nextStage!==null;
   document.getElementById('detail-foot').innerHTML=`
     <button class="btn btn-danger btn-sm" onclick="deleteLead_confirm('${id}')">Excluir</button>
     <button class="btn btn-ghost btn-sm" onclick="closeOv('ov-detail')">Fechar</button>
@@ -1872,6 +1916,19 @@ async function saveUser(){
   const pass=document.getElementById('u-pass').value;
   const role=document.getElementById('u-role').value;
   if(!display||!user||!pass){showToast('⚠ Preencha todos os campos');return}
+
+  // Se estiver editando e o display mudou, atualizar att dos leads
+  if(editUserId){
+    const oldUser = window._teamUsers?.find(u=>u.id===editUserId);
+    if(oldUser && oldUser.display !== display){
+      // Atualizar att de todos os leads desse atendente
+      await db.from('leads')
+        .update({att: display, updated_at: new Date().toISOString()})
+        .eq('clinic_id', S.clinic)
+        .eq('att', oldUser.display);
+    }
+  }
+
   await upsertUser({id:editUserId||undefined,user,pass,display,role},S.clinic);
   closeOv('ov-user');
   await renderTeam();
