@@ -894,6 +894,8 @@ async function setLeads(leads){ /* não usado diretamente — usar upsertLead/de
 
 async function upsertLead(lead){
   const row = leadToDb(lead);
+  // Não enviar created_at=undefined para não sobrescrever no banco
+  if(!row.created_at) delete row.created_at;
   const {error} = await db.from('leads').upsert(row,{onConflict:'id'});
   if(error) console.error('upsertLead',error);
 }
@@ -1353,17 +1355,24 @@ async function saveLead(){
   const potencialInicial=type==='procedimento'?calcPotencialInicial(services):0;
   const n=now();
 
+  let originalCreatedAt = n;
+  if(editId){
+    // Preservar createdAt original do banco
+    const all = await getLeads();
+    const orig = all.find(x=>x.id===editId);
+    if(orig) originalCreatedAt = orig.createdAt || orig.created_at || n;
+  }
+
   const lead = {
     id: editId || 'l_'+Date.now(),
     name, phone:v('f-phone'), att:v('f-att'), origin, type,
     services, potencialInicial, obs:v('f-obs'), stage,
     temp:autoTemp(origin),
-    consultaResult: editId ? null : null,
+    consultaResult: null,
     jaConsultou: false,
-    createdAt: editId ? undefined : n,
+    createdAt: originalCreatedAt,
     updatedAt: n,
   };
-  if(!editId) lead.createdAt = n;
 
   await upsertLead(lead);
   closeOv('ov-lead');
