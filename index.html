@@ -1,0 +1,1866 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LeadFlow</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+/* ── THEMES ── */
+:root{
+  --radius:14px;--radius-sm:9px;--radius-xs:6px;
+  --shadow:0 1px 3px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.06);
+  --shadow-md:0 4px 24px rgba(0,0,0,.1);
+  --font-title:'Playfair Display',Georgia,serif;
+  --font-body:'DM Sans',system-ui,sans-serif;
+  --transition:.18s ease;
+}
+[data-theme="light"]{
+  --bg:#F7F6F3;--bg2:#FFFFFF;--bg3:#F0EEE9;
+  --surface:#FFFFFF;--surface2:#F7F6F3;--surface3:#EFEDE8;
+  --border:#E5E2DB;--border2:#D8D4CC;
+  --text:#1A1916;--text2:#6B6760;--text3:#A8A49D;
+  --accent:#8B7355;--accent-light:#F0EAE0;--accent-hover:#7A6347;
+  --green:#2D7A4F;--green-bg:#EBF5EF;
+  --amber:#92600A;--amber-bg:#FDF3E3;
+  --red:#B03A2E;--red-bg:#FAEAE8;
+  --blue:#2B5C8A;--blue-bg:#EAF1F8;
+  --purple:#6B4E8A;--purple-bg:#F2EDF8;
+  --sidebar-bg:#1C1B18;--sidebar-text:#C8C4BC;--sidebar-active:#FFFFFF;
+}
+[data-theme="dark"]{
+  --bg:#131210;--bg2:#1A1916;--bg3:#211F1C;
+  --surface:#1A1916;--surface2:#211F1C;--surface3:#2A2824;
+  --border:#2E2C28;--border2:#3A3834;
+  --text:#EAE7E0;--text2:#8A8680;--text3:#504E4A;
+  --accent:#C4A97D;--accent-light:#2A2420;--accent-hover:#D4BA8E;
+  --green:#4CAF7D;--green-bg:#0E2018;
+  --amber:#F0A830;--amber-bg:#1E1608;
+  --red:#E06060;--red-bg:#200E0E;
+  --blue:#6BA3D6;--blue-bg:#0E1820;
+  --purple:#A87ED4;--purple-bg:#180E22;
+  --sidebar-bg:#111009;--sidebar-text:#8A8680;--sidebar-active:#EAE7E0;
+}
+
+/* ── BASE ── */
+body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.5;transition:background var(--transition),color var(--transition)}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+input,select,textarea,button{font-family:var(--font-body)}
+
+/* ── PAGES ── */
+.page{display:none;min-height:100vh}
+.page.active{display:flex;flex-direction:column}
+
+/* ════════════════════════════
+   LOGIN
+════════════════════════════ */
+#page-login{
+  align-items:center;justify-content:center;
+  padding:24px;
+  background:var(--bg);
+}
+.login-wrap{width:100%;max-width:380px;animation:fadeUp .4s ease both}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+.login-brand{text-align:center;margin-bottom:32px}
+.login-brand-mark{
+  width:48px;height:48px;border-radius:12px;
+  background:var(--accent);
+  display:flex;align-items:center;justify-content:center;
+  margin:0 auto 14px;
+  box-shadow:0 4px 16px rgba(139,115,85,.3);
+}
+.login-brand-mark svg{width:22px;height:22px;fill:#fff}
+.login-brand h1{font-family:var(--font-title);font-size:26px;font-weight:700;letter-spacing:-.3px;color:var(--text)}
+.login-brand p{font-size:12px;color:var(--text3);margin-top:4px;letter-spacing:.3px;text-transform:uppercase}
+.login-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:28px;box-shadow:var(--shadow)}
+.lf{margin-bottom:16px}
+.lf label{display:block;font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:7px}
+.lf input,.lf select{
+  width:100%;background:var(--surface2);border:1px solid var(--border);
+  border-radius:var(--radius-sm);padding:11px 13px;
+  color:var(--text);font-size:14px;outline:none;
+  transition:border-color var(--transition);
+}
+.lf input:focus,.lf select:focus{border-color:var(--accent)}
+.lf select option{background:var(--surface)}
+.btn-login{
+  width:100%;background:var(--accent);color:#fff;border:none;
+  border-radius:var(--radius-sm);padding:13px;
+  font-size:14px;font-weight:600;cursor:pointer;
+  transition:background var(--transition);margin-top:8px;
+  letter-spacing:.2px;
+}
+.btn-login:hover{background:var(--accent-hover)}
+.login-err{color:var(--red);font-size:12px;text-align:center;margin-top:10px;display:none}
+.login-theme-toggle{
+  position:fixed;top:16px;right:16px;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:20px;padding:6px 12px;
+  font-size:12px;color:var(--text2);cursor:pointer;
+  display:flex;align-items:center;gap:6px;
+}
+
+/* ════════════════════════════
+   APP SHELL
+════════════════════════════ */
+#page-app{flex-direction:row;min-height:100vh}
+
+/* SIDEBAR */
+.sidebar{
+  width:220px;min-height:100vh;flex-shrink:0;
+  background:var(--sidebar-bg);
+  display:flex;flex-direction:column;
+  position:sticky;top:0;height:100vh;overflow-y:auto;
+  transition:width var(--transition),transform var(--transition);
+  z-index:200;
+}
+.sidebar-top{padding:20px 18px 16px;border-bottom:1px solid rgba(255,255,255,.06)}
+.sidebar-brand{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.sidebar-mark{
+  width:30px;height:30px;border-radius:8px;background:var(--accent);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.sidebar-mark svg{width:14px;height:14px;fill:#fff}
+.sidebar-brand-name{font-family:var(--font-title);font-size:16px;font-weight:700;color:#fff;letter-spacing:-.2px}
+.sidebar-clinic{
+  background:rgba(255,255,255,.05);border-radius:var(--radius-xs);
+  padding:8px 10px;
+}
+.sidebar-clinic-name{font-size:11px;font-weight:600;color:var(--accent);letter-spacing:.3px}
+.sidebar-clinic-user{font-size:11px;color:var(--sidebar-text);margin-top:2px;opacity:.7}
+.sidebar-nav{padding:12px 10px;flex:1}
+.nav-section{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:rgba(255,255,255,.2);padding:0 8px;margin:12px 0 6px}
+.nav-item{
+  display:flex;align-items:center;gap:9px;
+  padding:8px 10px;border-radius:var(--radius-xs);
+  cursor:pointer;font-size:13px;font-weight:500;
+  color:var(--sidebar-text);transition:all var(--transition);
+  position:relative;margin-bottom:1px;
+}
+.nav-item:hover{background:rgba(255,255,255,.06);color:#fff}
+.nav-item.active{background:rgba(255,255,255,.1);color:var(--sidebar-active)}
+.nav-item.active::before{content:'';position:absolute;left:0;top:20%;bottom:20%;width:2px;background:var(--accent);border-radius:1px}
+.nav-icon{width:16px;height:16px;flex-shrink:0;opacity:.7}
+.nav-item.active .nav-icon,.nav-item:hover .nav-icon{opacity:1}
+.nav-badge{margin-left:auto;background:var(--red);color:#fff;font-size:10px;font-weight:700;border-radius:10px;padding:1px 6px;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+.sidebar-footer{padding:12px 10px 16px;border-top:1px solid rgba(255,255,255,.06)}
+.theme-toggle-btn{
+  display:flex;align-items:center;gap:8px;width:100%;
+  background:transparent;border:none;cursor:pointer;
+  color:var(--sidebar-text);font-size:12px;padding:7px 8px;
+  border-radius:var(--radius-xs);transition:all var(--transition);
+  margin-bottom:4px;
+}
+.theme-toggle-btn:hover{background:rgba(255,255,255,.06);color:#fff}
+.theme-toggle-btn .toggle-track{
+  width:30px;height:16px;border-radius:8px;background:rgba(255,255,255,.15);
+  position:relative;margin-left:auto;flex-shrink:0;transition:background .2s;
+}
+.theme-toggle-btn .toggle-thumb{
+  width:12px;height:12px;border-radius:50%;background:#fff;
+  position:absolute;top:2px;left:2px;transition:left .2s;
+}
+[data-theme="dark"] .toggle-track{background:var(--accent)!important}
+[data-theme="dark"] .toggle-thumb{left:16px!important}
+.btn-logout{
+  display:flex;align-items:center;gap:8px;width:100%;
+  background:transparent;border:none;cursor:pointer;
+  color:rgba(255,255,255,.3);font-size:12px;padding:7px 8px;
+  border-radius:var(--radius-xs);transition:all var(--transition);
+  font-family:var(--font-body);
+}
+.btn-logout:hover{color:var(--red);background:rgba(255,255,255,.04)}
+
+/* MOBILE SIDEBAR */
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:190}
+.mobile-topbar{display:none;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
+.mobile-topbar-brand{font-family:var(--font-title);font-size:17px;font-weight:700;color:var(--text)}
+.mobile-menu-btn{background:none;border:none;cursor:pointer;color:var(--text);padding:4px}
+
+/* MAIN */
+.main{flex:1;overflow-y:auto;min-width:0;display:flex;flex-direction:column}
+
+/* ── VIEWS ── */
+.view{display:none;flex:1;padding:28px;flex-direction:column}
+.view.active{display:flex}
+.view-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px;gap:12px;flex-wrap:wrap}
+.view-title{font-family:var(--font-title);font-size:24px;font-weight:700;color:var(--text);letter-spacing:-.3px}
+.view-sub{font-size:12px;color:var(--text3);margin-top:3px;letter-spacing:.2px}
+
+/* ── BUTTONS ── */
+.btn{border:none;cursor:pointer;font-family:var(--font-body);border-radius:var(--radius-sm);font-size:13px;font-weight:600;padding:9px 16px;transition:all var(--transition);display:inline-flex;align-items:center;gap:7px;letter-spacing:.1px}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent-hover)}
+.btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border2)}
+.btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
+.btn-danger{background:transparent;color:var(--red);border:1px solid var(--red-bg)}
+.btn-danger:hover{background:var(--red-bg)}
+.btn-sm{padding:6px 12px;font-size:12px}
+.btn-icon{padding:7px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-xs);cursor:pointer;color:var(--text2);display:inline-flex;align-items:center;justify-content:center;transition:all var(--transition)}
+.btn-icon:hover{border-color:var(--accent);color:var(--accent)}
+
+/* ════════════════════════════
+   KANBAN
+════════════════════════════ */
+.follow-alert{
+  display:none;
+  background:var(--amber-bg);border:1px solid var(--amber);
+  border-radius:var(--radius-sm);padding:10px 14px;
+  margin-bottom:16px;font-size:13px;color:var(--amber);
+  display:flex;align-items:center;gap:8px;
+}
+.follow-alert.hidden{display:none!important}
+.kanban-board{display:flex;gap:12px;overflow-x:auto;padding-bottom:16px;flex:1;align-items:flex-start}
+.k-col{min-width:220px;width:220px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);display:flex;flex-direction:column;flex-shrink:0}
+.k-col-head{padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.k-col-head-left{display:flex;align-items:center;gap:8px}
+.k-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.k-col-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--text2)}
+.k-badge{background:var(--surface2);color:var(--text3);font-size:10px;font-weight:700;border-radius:10px;padding:1px 7px;border:1px solid var(--border)}
+.k-col-body{padding:10px;display:flex;flex-direction:column;gap:7px;min-height:60px}
+
+/* LEAD CARD */
+.lead-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;cursor:pointer;transition:all var(--transition);position:relative}
+.lead-card:hover{border-color:var(--accent);box-shadow:var(--shadow)}
+.lc-top{display:flex;align-items:flex-start;justify-content:space-between;gap:6px;margin-bottom:8px}
+.lc-ava{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;border:1px solid var(--border)}
+.lc-name{font-size:12px;font-weight:700;color:var(--text);line-height:1.3}
+.lc-phone{font-size:10px;color:var(--text3);margin-top:1px}
+.temp-pip{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:4px}
+.lc-origin{font-size:10px;color:var(--text3);display:flex;align-items:center;gap:4px;margin-bottom:6px}
+.lc-tags{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px}
+.tag{font-size:10px;font-weight:600;padding:2px 7px;border-radius:20px;letter-spacing:.2px}
+.tag-consulta-sim{background:var(--green-bg);color:var(--green)}
+.tag-consulta-nao{background:var(--red-bg);color:var(--red)}
+.tag-ja-consultou{background:var(--purple-bg);color:var(--purple)}
+.tag-mentoria{background:var(--blue-bg);color:var(--blue)}
+.tag-demitido{background:var(--red-bg);color:var(--red)}
+.lc-foot{display:flex;align-items:center;justify-content:space-between;margin-top:6px}
+.lc-time{font-size:10px;color:var(--text3)}
+.lc-att{font-size:10px;color:var(--text3);font-style:italic;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:80px}
+.k-add-btn{border:1.5px dashed var(--border2);border-radius:var(--radius-xs);padding:8px;text-align:center;color:var(--text3);font-size:11px;font-weight:600;cursor:pointer;transition:all var(--transition)}
+.k-add-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+/* FILTER TABS */
+.kanban-filters{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+.kf-btn{padding:6px 14px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--text3);font-size:12px;font-weight:600;cursor:pointer;transition:all var(--transition);font-family:var(--font-body)}
+.kf-btn:hover{border-color:var(--accent);color:var(--accent)}
+.kf-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
+
+/* FOLLOW UP LEVELS */
+.lead-card.fu1{border-left:3px solid var(--amber)}
+.lead-card.fu2{border-left:3px solid var(--red);background:color-mix(in srgb,var(--bg2) 96%,var(--amber) 4%)}
+.lead-card.fu3{border-left:3px solid var(--red);background:color-mix(in srgb,var(--bg2) 92%,var(--red) 8%);animation:fu3pulse 3s ease-in-out infinite}
+@keyframes fu3pulse{0%,100%{box-shadow:none}50%{box-shadow:0 0 0 2px rgba(176,58,46,.15)}}
+.fu-counter{display:flex;align-items:center;gap:5px;margin:5px 0}
+.fu-step{width:18px;height:18px;border-radius:50%;border:1.5px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:var(--text3);cursor:pointer;transition:all var(--transition);flex-shrink:0}
+.fu-step.done{border-color:var(--amber);background:var(--amber-bg);color:var(--amber)}
+.fu-step.done-red{border-color:var(--red);background:var(--red-bg);color:var(--red)}
+.fu-label{font-size:10px;color:var(--text3);margin-left:2px}
+
+/* ── CHIPS PROCEDIMENTOS ── */
+.proc-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.proc-chip{
+  padding:5px 11px;border-radius:20px;font-size:11px;font-weight:600;
+  border:1.5px solid var(--border2);color:var(--text3);cursor:pointer;
+  transition:all .15s;background:var(--surface2);user-select:none;
+}
+.proc-chip:hover{border-color:var(--accent);color:var(--accent)}
+.proc-chip.sel{border-color:var(--accent);background:var(--accent-light);color:var(--accent)}
+.proc-chip.apenas-consulta.sel{border-color:var(--blue);background:var(--blue-bg);color:var(--blue)}
+.proc-potencial{font-size:11px;color:var(--green);font-weight:600;margin-top:8px;min-height:16px}
+
+/* ── VALORES BASE (ADM) ── */
+.vb-item{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:6px}
+.vb-name{flex:1;font-size:13px;font-weight:500;color:var(--text)}
+.vb-input{width:100px;background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius-xs);padding:6px 10px;font-size:12px;color:var(--text);text-align:right;outline:none;font-family:var(--font-body)}
+.vb-input:focus{border-color:var(--accent)}
+
+/* ════════════════════════════
+   DASHBOARD
+════════════════════════════ */
+.dash-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-bottom:20px}
+.dash-stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px}
+.ds-val{font-family:var(--font-title);font-size:30px;font-weight:700;letter-spacing:-.5px;line-height:1}
+.ds-lbl{font-size:11px;color:var(--text3);margin-top:6px;text-transform:uppercase;letter-spacing:.5px}
+.ds-delta{font-size:11px;color:var(--green);margin-top:6px}
+.dash-2col{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+@media(max-width:640px){.dash-2col{grid-template-columns:1fr}}
+.dash-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px}
+.dash-card-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);margin-bottom:14px}
+.bar-row{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.bar-lbl{font-size:11px;color:var(--text2);width:120px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar-track{flex:1;background:var(--surface3);border-radius:3px;height:5px;overflow:hidden}
+.bar-fill{height:100%;border-radius:3px;transition:width .5s ease}
+.bar-n{font-size:11px;color:var(--text3);width:24px;text-align:right;flex-shrink:0}
+.donut-wrap{display:flex;align-items:center;gap:16px}
+.donut-legend{flex:1;display:flex;flex-direction:column;gap:8px}
+.donut-item{display:flex;align-items:center;gap:7px;font-size:11px}
+.donut-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.rank-item{display:flex;align-items:center;gap:10px;padding:9px 11px;background:var(--surface2);border-radius:var(--radius-xs);margin-bottom:7px;font-size:12px}
+.rank-pos{width:18px;font-weight:800;color:var(--text3);font-size:11px}
+.rank-name{flex:1;font-weight:600}
+.rank-stat{color:var(--text3);font-size:11px}
+.temp-cols{display:flex;gap:8px;align-items:flex-end;height:90px}
+.tc{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px}
+.tc-bar{width:100%;border-radius:4px 4px 0 0;min-height:4px;transition:height .5s ease}
+.tc-lbl{font-size:9px;color:var(--text3);text-align:center;line-height:1.2}
+.tc-val{font-size:11px;font-weight:700}
+
+/* ════════════════════════════
+   EQUIPE (user mgmt)
+════════════════════════════ */
+.team-list{display:flex;flex-direction:column;gap:8px;margin-top:4px}
+.team-item{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm)}
+.team-item-left{display:flex;align-items:center;gap:10px}
+.team-ava{width:34px;height:34px;border-radius:50%;background:var(--surface3);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--text2);border:1px solid var(--border)}
+.team-name{font-size:13px;font-weight:600}
+.team-role{font-size:11px;color:var(--text3);margin-top:1px}
+.role-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;letter-spacing:.3px}
+.role-adm{background:var(--amber-bg);color:var(--amber)}
+.role-comercial{background:var(--blue-bg);color:var(--blue)}
+
+/* ════════════════════════════
+   MODAL
+════════════════════════════ */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);z-index:500;display:none;align-items:center;justify-content:center;padding:16px}
+.overlay.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);width:100%;max-width:460px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-md);animation:modalIn .22s ease}
+.modal-lg{max-width:560px}
+@keyframes modalIn{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:none}}
+.modal-head{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--border)}
+.modal-title{font-family:var(--font-title);font-size:17px;font-weight:600;color:var(--text)}
+.modal-close{background:none;border:none;color:var(--text3);cursor:pointer;font-size:18px;line-height:1;padding:2px;transition:color var(--transition)}
+.modal-close:hover{color:var(--text)}
+.modal-body{padding:22px}
+.modal-foot{padding:14px 22px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
+.ff{margin-bottom:14px}
+.ff label{display:block;font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.ff input,.ff select,.ff textarea{width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius-xs);padding:10px 12px;color:var(--text);font-size:13px;outline:none;transition:border-color var(--transition)}
+.ff input:focus,.ff select:focus,.ff textarea:focus{border-color:var(--accent)}
+.ff select option{background:var(--surface)}
+.ff textarea{resize:vertical;min-height:64px}
+.ff-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.sec{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--text3);margin:18px 0 12px;display:flex;align-items:center;gap:8px}
+.sec::after{content:'';flex:1;height:1px;background:var(--border)}
+.stage-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.stage-opt{border:1px solid var(--border2);border-radius:var(--radius-xs);padding:7px 6px;text-align:center;cursor:pointer;font-size:11px;font-weight:600;color:var(--text3);transition:all .15s}
+.stage-opt:hover,.stage-opt.sel{border-color:var(--accent);color:var(--accent);background:var(--accent-light)}
+
+/* DETAIL */
+.detail-hero{background:var(--surface2);border-radius:var(--radius-sm);padding:14px;margin-bottom:16px;display:flex;align-items:center;gap:12px}
+.detail-ava{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;flex-shrink:0;border:1px solid var(--border)}
+.detail-name{font-size:15px;font-weight:700}
+.detail-phone{font-size:12px;color:var(--text3);margin-top:1px}
+.pipeline{display:flex;align-items:center;overflow-x:auto;gap:0;margin:12px 0 16px;padding-bottom:4px}
+.pipe-step{flex:1;min-width:60px;text-align:center;padding:6px 2px;font-size:9px;font-weight:600;color:var(--text3);position:relative;cursor:pointer;transition:color var(--transition);text-transform:uppercase;letter-spacing:.4px}
+.pipe-step::after{content:'›';position:absolute;right:-5px;top:50%;transform:translateY(-50%);font-size:14px;color:var(--border2)}
+.pipe-step:last-child::after{display:none}
+.pipe-dot{width:6px;height:6px;border-radius:50%;background:var(--border2);margin:0 auto 4px;transition:background var(--transition)}
+.pipe-step.done{color:var(--green)}.pipe-step.done .pipe-dot{background:var(--green)}
+.pipe-step.cur{color:var(--accent);font-weight:700}.pipe-step.cur .pipe-dot{background:var(--accent)}
+.info-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)}
+.info-row:last-child{border-bottom:none}
+.info-k{font-size:11px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.4px}
+.info-v{font-size:12px;font-weight:600;text-align:right;max-width:60%}
+
+/* consulta confirm */
+.consulta-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.consulta-btn{padding:12px;border-radius:var(--radius-sm);border:1px solid var(--border2);cursor:pointer;text-align:center;font-size:13px;font-weight:600;transition:all var(--transition);background:var(--surface2);color:var(--text2)}
+.consulta-btn:hover{border-color:var(--accent);color:var(--accent)}
+.consulta-btn.yes:hover,.consulta-btn.yes.active{background:var(--green-bg);border-color:var(--green);color:var(--green)}
+.consulta-btn.no:hover,.consulta-btn.no.active{background:var(--red-bg);border-color:var(--red);color:var(--red)}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:20px;right:20px;z-index:900;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:10px 16px;font-size:13px;font-weight:500;box-shadow:var(--shadow-md);display:none;animation:toastIn .25s ease;max-width:260px;color:var(--text)}
+@keyframes toastIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* ── EMPTY ── */
+.empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 20px;text-align:center;color:var(--text3);gap:10px}
+.empty svg{opacity:.3}
+.empty p{font-size:13px;max-width:200px;line-height:1.5}
+
+/* ════════════════════════════
+   RESPONSIVE
+════════════════════════════ */
+@media(max-width:768px){
+  .sidebar{position:fixed;left:0;top:0;transform:translateX(-100%)}
+  .sidebar.open{transform:none}
+  .sidebar-overlay.open{display:block}
+  .mobile-topbar{display:flex}
+  #page-app{flex-direction:column}
+  .main{flex:1}
+  .view{padding:16px}
+  .view-title{font-size:20px}
+  .kanban-board{gap:10px}
+  .k-col{min-width:200px;width:200px}
+  .dash-grid{grid-template-columns:1fr 1fr}
+}
+@media(max-width:480px){
+  .view{padding:12px}
+  .ff-row{grid-template-columns:1fr}
+  .dash-grid{grid-template-columns:1fr 1fr}
+  .modal{max-width:100%;margin:0;border-radius:var(--radius) var(--radius) 0 0;position:fixed;bottom:0;left:0;right:0}
+  .overlay{align-items:flex-end;padding:0}
+}
+</style>
+</head>
+<body data-theme="light">
+
+<!-- ══════════ LOGIN ══════════ -->
+<div id="page-login" class="page active">
+  <button class="login-theme-toggle" onclick="toggleTheme()">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+    Tema
+  </button>
+  <div class="login-wrap">
+    <div class="login-brand">
+      <div class="login-brand-mark"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg></div>
+      <h1>LeadFlow</h1>
+      <p>Gestão de Leads · Clínicas</p>
+    </div>
+    <div class="login-card">
+      <div class="lf"><label>Clínica</label>
+        <select id="lc"><option value="">Selecione</option><option value="heloisa">Clínica Heloisa Santos</option><option value="suellen">Clínica Dra. Suellen Garcia</option></select>
+      </div>
+      <div class="lf"><label>Usuário</label><input type="text" id="lu" placeholder="usuário" autocomplete="off"></div>
+      <div class="lf"><label>Senha</label><input type="password" id="lp" placeholder="••••••"></div>
+      <button class="btn-login" onclick="doLogin()">Entrar</button>
+      <div class="login-err" id="lerr">Usuário ou senha incorretos.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ APP ══════════ -->
+<div id="page-app" class="page">
+
+  <!-- mobile topbar -->
+  <div class="mobile-topbar">
+    <button class="mobile-menu-btn" onclick="toggleSidebar()">
+      <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <span class="mobile-topbar-brand">LeadFlow</span>
+    <button class="btn-icon" onclick="openNewLead()">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </button>
+  </div>
+  <div class="sidebar-overlay" id="sb-overlay" onclick="toggleSidebar()"></div>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-top">
+      <div class="sidebar-brand">
+        <div class="sidebar-mark"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg></div>
+        <span class="sidebar-brand-name">LeadFlow</span>
+      </div>
+      <div class="sidebar-clinic">
+        <div class="sidebar-clinic-name" id="sb-cname"></div>
+        <div class="sidebar-clinic-user" id="sb-uname"></div>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">Principal</div>
+      <div class="nav-item active" onclick="showView('kanban',this)">
+        <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="18" rx="1"/><rect x="14" y="3" width="7" height="11" rx="1"/><rect x="14" y="18" width="7" height="3" rx="1"/></svg>
+        Kanban
+        <span class="nav-badge" id="follow-badge" style="display:none">!</span>
+      </div>
+      <div class="nav-item" id="nav-dash" onclick="showView('dashboard',this)" style="display:none">
+        <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Dashboard
+      </div>
+      <div class="nav-item" id="nav-valores" onclick="showView('valores',this)" style="display:none">
+        <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        Valores Base
+      </div>
+      <div class="nav-item" id="nav-team" onclick="showView('team',this)" style="display:none">
+        <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Equipe
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="theme-toggle-btn" onclick="toggleTheme()">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/></svg>
+        <span id="theme-lbl">Modo escuro</span>
+        <div class="toggle-track"><div class="toggle-thumb"></div></div>
+      </button>
+      <button class="btn-logout" id="btn-reset-demo" onclick="resetDemoData()" style="display:none;font-size:11px;color:var(--amber);opacity:.7;margin-bottom:2px">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.95"/></svg>
+        Reimportar dados Maio
+      </button>
+      <button class="btn-logout" onclick="doLogout()">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Sair
+      </button>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- KANBAN VIEW -->
+    <div id="view-kanban" class="view active">
+      <div class="view-header">
+        <div>
+          <div class="view-title">Leads</div>
+          <div class="view-sub" id="kanban-sub"></div>
+        </div>
+        <button class="btn btn-primary" onclick="openNewLead()">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Novo Lead
+        </button>
+      </div>
+      <div id="follow-alert" class="follow-alert hidden">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span id="follow-alert-text"></span>
+      </div>
+      <div class="kanban-filters">
+        <button class="kf-btn active" onclick="setKanbanFilter('todos',this)">Todos</button>
+        <button class="kf-btn" onclick="setKanbanFilter('procedimento',this)">Procedimentos</button>
+        <button class="kf-btn" onclick="setKanbanFilter('mentoria',this)">Mentoria</button>
+      </div>
+      <div class="kanban-board" id="kanban-board"></div>
+    </div>
+
+    <!-- DASHBOARD VIEW -->
+    <div id="view-dashboard" class="view">
+      <div class="view-header">
+        <div><div class="view-title">Dashboard</div><div class="view-sub" id="dash-sub">mês atual</div></div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+        <div class="kanban-filters" style="margin-bottom:0">
+          <button class="kf-btn active" onclick="setDashFilter('todos',this)">Todos</button>
+          <button class="kf-btn" onclick="setDashFilter('procedimento',this)">Procedimentos</button>
+          <button class="kf-btn" onclick="setDashFilter('mentoria',this)">Mentoria</button>
+        </div>
+        <div class="kanban-filters" style="margin-bottom:0">
+          <button class="kf-btn active" onclick="setDashPeriod('mes',this)">Mês atual</button>
+          <button class="kf-btn" onclick="setDashPeriod('tri',this)">3 meses</button>
+          <button class="kf-btn" onclick="setDashPeriod('ano',this)">Este ano</button>
+          <button class="kf-btn" onclick="setDashPeriod('tudo',this)">Tudo</button>
+        </div>
+      </div>
+      <div id="dash-body"></div>
+    </div>
+
+    <!-- VALORES BASE VIEW -->
+    <div id="view-valores" class="view">
+      <div class="view-header">
+        <div><div class="view-title">Valores Base</div><div class="view-sub">referência para cálculo do potencial de leads</div></div>
+        <button class="btn btn-primary" onclick="saveValoresBase()">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+          Salvar
+        </button>
+      </div>
+      <div id="valores-body"></div>
+    </div>
+
+    <!-- TEAM VIEW -->
+    <div id="view-team" class="view">
+      <div class="view-header">
+        <div><div class="view-title">Equipe</div><div class="view-sub">gerencie os usuários da clínica</div></div>
+        <button class="btn btn-primary" onclick="openNewUser()">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Novo Usuário
+        </button>
+      </div>
+      <div id="team-body"></div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ══ MODAL LEAD ══ -->
+<div class="overlay" id="ov-lead">
+<div class="modal modal-lg">
+  <div class="modal-head">
+    <span class="modal-title" id="ml-title">Novo Lead</span>
+    <button class="modal-close" onclick="closeOv('ov-lead')">✕</button>
+  </div>
+  <div class="modal-body">
+    <div class="sec">Identificação</div>
+    <div class="ff-row">
+      <div class="ff"><label>Nome *</label><input id="f-name" placeholder="Nome completo"></div>
+      <div class="ff"><label>Telefone</label><input id="f-phone" placeholder="(00) 00000-0000"></div>
+    </div>
+    <div class="ff-row">
+      <div class="ff"><label>Atendente</label><input id="f-att" placeholder="Seu nome"></div>
+      <div class="ff"><label>Como chegou</label>
+        <select id="f-origin">
+          <optgroup label="Vieram até nós">
+            <option value="link_bio">Link na Bio (WhatsApp)</option>
+            <option value="direct_esp">Direct espontâneo</option>
+            <option value="indicacao">Indicação</option>
+          </optgroup>
+          <optgroup label="Fábrica de Contatos">
+            <option value="fab_seguidor">Novo seguidor abordado</option>
+            <option value="fab_story">Reagiu em Story</option>
+            <option value="fab_feed">Comentou no Feed</option>
+            <option value="fab_direct">Respondeu Direct</option>
+          </optgroup>
+        </select>
+      </div>
+    </div>
+    <div class="sec">Qualificação <span style="font-size:10px;font-weight:400;color:var(--text3);text-transform:none;letter-spacing:0">(opcional)</span></div>
+    <div class="ff">
+      <label>Tipo de serviço</label>
+      <select id="f-type" onchange="onTypeChange()">
+        <option value="procedimento">Procedimento Estético</option>
+        <option value="mentoria" id="opt-mentoria">Mentoria</option>
+      </select>
+    </div>
+    <div id="f-proc-wrap">
+      <div class="ff" style="margin-bottom:4px">
+        <label>Procedimentos de interesse</label>
+        <div class="proc-chips" id="proc-chips"></div>
+      </div>
+      <div class="proc-potencial" id="proc-potencial"></div>
+    </div>
+    <div class="ff" id="f-ment-wrap" style="display:none">
+      <label>Pacote de Mentoria</label>
+      <div class="proc-chips" id="ment-chips"></div>
+    </div>
+    <div class="ff"><label>Observações</label><textarea id="f-obs" placeholder="Anotações..."></textarea></div>
+    <div class="sec">Etapa</div>
+    <div class="stage-grid" id="stage-grid"></div>
+  </div>
+  <div class="modal-foot">
+    <button class="btn btn-ghost" onclick="closeOv('ov-lead')">Cancelar</button>
+    <button class="btn btn-primary" onclick="saveLead()">Salvar</button>
+  </div>
+</div>
+</div>
+
+<!-- ══ MODAL DETAIL ══ -->
+<div class="overlay" id="ov-detail">
+<div class="modal modal-lg">
+  <div class="modal-head">
+    <span class="modal-title">Detalhes</span>
+    <button class="modal-close" onclick="closeOv('ov-detail')">✕</button>
+  </div>
+  <div class="modal-body" id="detail-body"></div>
+  <div class="modal-foot" id="detail-foot"></div>
+</div>
+</div>
+
+<!-- ══ MODAL USER ══ -->
+<div class="overlay" id="ov-user">
+<div class="modal">
+  <div class="modal-head">
+    <span class="modal-title" id="mu-title">Novo Usuário</span>
+    <button class="modal-close" onclick="closeOv('ov-user')">✕</button>
+  </div>
+  <div class="modal-body">
+    <div class="ff"><label>Nome de exibição</label><input id="u-display" placeholder="Ex: Ana Comercial"></div>
+    <div class="ff"><label>Usuário (login)</label><input id="u-user" placeholder="Ex: ana" autocomplete="off"></div>
+    <div class="ff"><label>Senha</label><input type="password" id="u-pass" placeholder="••••"></div>
+    <div class="ff"><label>Perfil</label>
+      <select id="u-role">
+        <option value="comercial">Comercial</option>
+        <option value="adm">ADM</option>
+      </select>
+    </div>
+  </div>
+  <div class="modal-foot">
+    <button class="btn btn-ghost" onclick="closeOv('ov-user')">Cancelar</button>
+    <button class="btn btn-primary" onclick="saveUser()">Salvar</button>
+  </div>
+</div>
+</div>
+
+
+<!-- TICKET MODAL -->
+<div class="overlay" id="ov-ticket">
+<div class="modal">
+  <div class="modal-head">
+    <span class="modal-title">Ticket Médio</span>
+    <button class="modal-close" onclick="closeOv('ov-ticket')">✕</button>
+  </div>
+  <div class="modal-body">
+    <p style="font-size:12px;color:var(--text3);margin-bottom:16px;line-height:1.5">Usado para estimar o potencial de leads sem valor definido. Deixe em branco para não usar estimativa.</p>
+    <div class="ff"><label>Ticket médio — Procedimento (R$)</label><input type="number" id="tk-proc" placeholder="ex: 2500"></div>
+    <div class="ff"><label>Ticket médio — Mentoria (R$)</label><input type="number" id="tk-ment" placeholder="ex: 5000"></div>
+  </div>
+  <div class="modal-foot">
+    <button class="btn btn-ghost" onclick="closeOv('ov-ticket')">Cancelar</button>
+    <button class="btn btn-primary" onclick="saveTickets2()">Salvar</button>
+  </div>
+</div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════
+// DATA & CONFIG
+// ═══════════════════════════════════════════
+const DEFAULT_USERS = {
+  heloisa: [
+    {user:'osvaldo',pass:'1234',role:'adm',display:'Osvaldo'},
+    {user:'heloisa',pass:'1234',role:'adm',display:'Heloísa'},
+    {user:'comercial1',pass:'1234',role:'comercial',display:'Comercial 1'},
+  ],
+  suellen: [
+    {user:'danilo',pass:'1234',role:'adm',display:'Danilo'},
+    {user:'suellen',pass:'1234',role:'adm',display:'Suellen'},
+    {user:'comercial1',pass:'1234',role:'comercial',display:'Comercial 1'},
+  ]
+};
+const CLINIC_NAMES = {heloisa:'Clínica Heloisa Santos',suellen:'Clínica Dra. Suellen Garcia'};
+
+// Stages per flow per role
+const STAGES_PROC_COM = [
+  {id:'novo',       label:'Novo Lead',         color:'#6BA3D6'},
+  {id:'contato',    label:'Em Contato',        color:'#F0A830'},
+  {id:'followup',   label:'Follow Up',         color:'#A87ED4'},
+  {id:'consulta',   label:'Consulta Agendada', color:'#4CAF7D'},
+];
+const STAGES_PROC_ADM = [
+  {id:'novo',       label:'Novo Lead',         color:'#6BA3D6'},
+  {id:'contato',    label:'Em Contato',        color:'#F0A830'},
+  {id:'followup',   label:'Follow Up',         color:'#A87ED4'},
+  {id:'consulta',   label:'Consulta Agendada', color:'#4CAF7D'},
+  {id:'orcamento',  label:'Tratamento/Orçam.', color:'#C4A97D'},
+  {id:'fechado',    label:'Fechado',           color:'#2D7A4F'},
+  {id:'demitido',   label:'Cliente Demitido',  color:'#B03A2E'},
+];
+const STAGES_MENT = [
+  {id:'novo',       label:'Novo Lead',         color:'#6BA3D6'},
+  {id:'contato',    label:'Em Contato',        color:'#F0A830'},
+  {id:'followup',   label:'Follow Up',         color:'#A87ED4'},
+  {id:'proposta',   label:'Proposta Enviada',  color:'#C4A97D'},
+  {id:'fechado',    label:'Fechado',           color:'#2D7A4F'},
+  {id:'recusado',   label:'Recusado',          color:'#B03A2E'},
+];
+
+const ORIGINS = {
+  link_bio:     {label:'Link na Bio',        icon:'🔗',group:'nos'},
+  direct_esp:   {label:'Direct espontâneo',  icon:'📩',group:'nos'},
+  indicacao:    {label:'Indicação',          icon:'🤝',group:'nos'},
+  fab_seguidor: {label:'Novo seguidor',      icon:'👤',group:'fab'},
+  fab_story:    {label:'Reagiu em Story',    icon:'✨',group:'fab'},
+  fab_feed:     {label:'Comentou no Feed',   icon:'💬',group:'fab'},
+  fab_direct:   {label:'Respondeu Direct',   icon:'📬',group:'fab'},
+};
+const SERVICES = {'':'Não identificado',harmonizacao:'Harmonização Facial',botox:'Botox',preenchimento:'Preench. / Labial',bioestimulador:'Bioestimulador',rinoplastia:'Rinomodelação',lifting:'Lifting',full_face:'Full Face',skincare:'Skincare',manutencao:'Manutenção',remocao:'Remoção',outro:'Outro / Avaliação'};
+const TEMPS = {hot:{label:'Quente',color:'#E06060'},warm:{label:'Morno',color:'#F0A830'},cold:{label:'Frio',color:'#6BA3D6'},cool:{label:'Esfriando',color:'#A87ED4'}};
+const AVA_COLORS = ['#8B7355','#5C7A6B','#6B5C8B','#7A6B5C','#5C6B7A'];
+
+let S = null; // session
+let editId = null;
+let editUserId = null;
+let kanbanFilter = 'todos'; // 'todos' | 'procedimento' | 'mentoria'
+let dashFilter = 'todos';
+let dashPeriod = 'mes';
+
+function setDashFilter(f, el){
+  dashFilter = f;
+  document.querySelectorAll('#view-dashboard .kf-btn').forEach(b => {
+    if(['todos','procedimento','mentoria'].some(x=>b.textContent.toLowerCase().includes(x.split('')[0])||b.getAttribute('onclick')?.includes("'"+x+"'"))){
+      b.classList.remove('active');
+    }
+  });
+  el.classList.add('active');
+  renderDashboard();
+}
+
+function setDashPeriod(p, el){
+  dashPeriod = p;
+  const labels={mes:'Mês atual',tri:'Últimos 3 meses',ano:'Este ano',tudo:'Todo período'};
+  const sub=document.getElementById('dash-sub');
+  if(sub) sub.textContent=labels[p]||p;
+  // deactivate period buttons only
+  el.closest('div').querySelectorAll('.kf-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  renderDashboard();
+}
+
+function filterByPeriod(leads){
+  const now=new Date();
+  if(dashPeriod==='tudo') return leads;
+  return leads.filter(l=>{
+    const d=new Date(l.createdAt);
+    if(dashPeriod==='mes') return d.getFullYear()===now.getFullYear()&&d.getMonth()===now.getMonth();
+    if(dashPeriod==='tri'){const t=new Date(now);t.setMonth(t.getMonth()-3);return d>=t;}
+    if(dashPeriod==='ano') return d.getFullYear()===now.getFullYear();
+    return true;
+  });
+}
+
+function kTicketKey(c){ return 'lf2_ticket_'+c; }
+function getTickets(){ try{return JSON.parse(localStorage.getItem(kTicketKey(S.clinic))||'{"proc":0,"ment":0}');}catch{return {proc:0,ment:0};} }
+function saveTickets(d){ localStorage.setItem(kTicketKey(S.clinic), JSON.stringify(d)); }
+
+function setKanbanFilter(f, el){
+  kanbanFilter = f;
+  document.querySelectorAll('.kf-btn').forEach(b => b.classList.remove('active'));
+  if(el) el.classList.add('active');
+  renderKanban();
+}
+
+// ── Procedimentos e Mentorias defaults ──
+const PROC_DEFAULTS = [
+  {id:'harmonizacao', label:'Harmonização Facial', valor:0},
+  {id:'botox',        label:'Botox',               valor:0},
+  {id:'preenchimento',label:'Preench. / Labial',   valor:0},
+  {id:'rinoplastia',  label:'Rinomodelação',        valor:0},
+  {id:'lifting',      label:'Lifting',              valor:0},
+  {id:'full_face',    label:'Full Face',            valor:0},
+  {id:'bioestimulador',label:'Bioestimulador',     valor:0},
+  {id:'skincare',     label:'Skincare / Limpeza',  valor:0},
+  {id:'manutencao',   label:'Manutenção',           valor:0},
+  {id:'remocao',      label:'Remoção',              valor:0},
+  {id:'outro',        label:'Outro / Avaliação',   valor:0},
+];
+const MENT_DEFAULTS = [
+  {id:'ment_basic',   label:'Mentoria Básica',      valor:0},
+  {id:'ment_std',     label:'Mentoria Standard',    valor:0},
+  {id:'ment_premium', label:'Mentoria Premium',     valor:0},
+];
+
+function kValores(c){return `lf2_valores_${c}`}
+function setValores(proc,ment){
+  const d={proc:{},ment:{}};
+  proc.forEach(p=>d.proc[p.id]=p.valor);
+  ment.forEach(m=>d.ment[m.id]=m.valor);
+  localStorage.setItem(kValores(S.clinic),JSON.stringify(d));
+}
+function getValorProc(id){
+  const v=getValores();
+  return v.proc.find(p=>p.id===id)?.valor||0;
+}
+function calcPotencialInicial(services){
+  if(!services||!services.length) return 0;
+  if(services.includes('apenas_consulta')) return 0;
+  return services.reduce((s,id)=>s+getValorProc(id),0);
+}
+
+// Compatibilidade: converte leads antigos (service string → services array)
+function normalizeServices(l){
+  if(Array.isArray(l.services)) return l.services;
+  if(l.service) return [l.service];
+  return [];
+}
+function kLeads(c){return `lf2_leads_${c}`}
+function kUsers(c){return `lf2_users_${c}`}
+function getLeads(){return JSON.parse(localStorage.getItem(kLeads(S.clinic))||'[]')}
+function setLeads(d){localStorage.setItem(kLeads(S.clinic),JSON.stringify(d))}
+function getUsers(c){
+  const stored = localStorage.getItem(kUsers(c));
+  if(stored) return JSON.parse(stored);
+  const def = DEFAULT_USERS[c]||[];
+  localStorage.setItem(kUsers(c),JSON.stringify(def));
+  return def;
+}
+function setUsers(c,d){localStorage.setItem(kUsers(c),JSON.stringify(d))}
+
+// ── Theme ──
+function toggleTheme(){
+  const cur = document.body.getAttribute('data-theme');
+  const next = cur==='dark'?'light':'dark';
+  document.body.setAttribute('data-theme',next);
+  localStorage.setItem('lf_theme',next);
+  document.getElementById('theme-lbl').textContent = next==='dark'?'Modo claro':'Modo escuro';
+}
+(function(){
+  const saved = localStorage.getItem('lf_theme')||'light';
+  document.body.setAttribute('data-theme',saved);
+})();
+
+// ── Auto temp ──
+function autoTemp(origin){
+  if(['link_bio','direct_esp','indicacao'].includes(origin)) return 'hot';
+  if(['fab_story','fab_feed','fab_direct'].includes(origin)) return 'warm';
+  return 'cold';
+}
+
+// ── Stages for context ──
+function getStages(type, role){
+  if(type==='mentoria') return STAGES_MENT;
+  return role==='adm' ? STAGES_PROC_ADM : STAGES_PROC_COM;
+}
+
+// ════════════════════════════════════
+// LOGIN
+// ════════════════════════════════════
+function doLogin(){
+  const clinic=document.getElementById('lc').value;
+  const user=document.getElementById('lu').value.trim().toLowerCase();
+  const pass=document.getElementById('lp').value;
+  const err=document.getElementById('lerr');
+  if(!clinic){err.textContent='Selecione a clínica.';err.style.display='block';return}
+  const users=getUsers(clinic);
+  const found=users.find(u=>u.user===user&&u.pass===pass);
+  if(!found){err.textContent='Usuário ou senha incorretos.';err.style.display='block';return}
+  err.style.display='none';
+  S={clinic,user,role:found.role,display:found.display,clinicName:CLINIC_NAMES[clinic]};
+  initApp();
+}
+function doLogout(){
+  S=null;editId=null;
+  document.getElementById('page-login').classList.add('active');
+  document.getElementById('page-app').classList.remove('active');
+  document.getElementById('lu').value='';
+  document.getElementById('lp').value='';
+}
+document.getElementById('lp').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin()});
+
+// ════════════════════════════════════
+// SEED DATA — Suellen Maio 2026
+// ════════════════════════════════════
+const SUELLEN_SEED = [
+  {id:'s01',name:'Julia Ramos',phone:'62981796504',service:'botox',origin:'indicacao',temp:'hot',stage:'followup',fuLevel:2,type:'procedimento',att:'Suellen',obs:'Parando de responder — FU2',createdAt:'2026-05-01T09:00:00.000Z',updatedAt:'2026-05-01T09:00:00.000Z'},
+  {id:'s02',name:'Ana Clara Teodoro',phone:'62991657518',service:'preenchimento',origin:'indicacao',temp:'hot',stage:'followup',fuLevel:2,type:'procedimento',att:'Suellen',obs:'Labial — parando de responder',createdAt:'2026-05-01T09:05:00.000Z',updatedAt:'2026-05-01T09:05:00.000Z'},
+  {id:'s03',name:'Alice Pimenta',phone:'62981422668',service:'full_face',origin:'indicacao',temp:'hot',stage:'fechado',consultaResult:'sim',type:'procedimento',att:'Suellen',obs:'Retorno Full Face — atendida',createdAt:'2026-05-01T09:10:00.000Z',updatedAt:'2026-05-01T09:10:00.000Z'},
+  {id:'s04',name:'Sara Marx',phone:'62981422668',service:'outro',origin:'indicacao',temp:'hot',stage:'fechado',consultaResult:'sim',type:'procedimento',att:'Suellen',obs:'Manutenção — atendida',createdAt:'2026-05-01T09:15:00.000Z',updatedAt:'2026-05-01T09:15:00.000Z'},
+  {id:'s05',name:'(Sem nome)',phone:'62991686169',service:'botox',origin:'indicacao',temp:'hot',stage:'followup',fuLevel:2,type:'procedimento',att:'Suellen',obs:'Botox — parando de responder',createdAt:'2026-05-01T09:20:00.000Z',updatedAt:'2026-05-01T09:20:00.000Z'},
+  {id:'s06',name:'Ana Camila Faleiro',phone:'64993272058',service:'botox',origin:'indicacao',temp:'hot',stage:'orcamento',consultaResult:'sim',type:'procedimento',att:'Suellen',obs:'Botox — aguardando pagamento',createdAt:'2026-05-01T09:25:00.000Z',updatedAt:'2026-05-01T09:25:00.000Z'},
+  {id:'s07',name:'Keila',phone:'62996560758',service:'outro',origin:'indicacao',temp:'hot',stage:'orcamento',type:'procedimento',att:'Suellen',obs:'Avaliação — aguardando pagamento',createdAt:'2026-05-01T09:30:00.000Z',updatedAt:'2026-05-01T09:30:00.000Z'},
+  {id:'s08',name:'Laura (contadora)',phone:'62982036126',service:'outro',origin:'indicacao',temp:'hot',stage:'contato',type:'procedimento',att:'Suellen',obs:'Avaliação — em andamento',createdAt:'2026-05-01T09:35:00.000Z',updatedAt:'2026-05-01T09:35:00.000Z'},
+  {id:'s09',name:'Arlete Ribeiro',phone:'62984714044',service:'outro',origin:'indicacao',temp:'hot',stage:'fechado',consultaResult:'sim',type:'procedimento',att:'Suellen',obs:'Avaliação — atendida',createdAt:'2026-05-01T09:40:00.000Z',updatedAt:'2026-05-01T09:40:00.000Z'},
+  {id:'s10',name:'Jullyane de Moura',phone:'62991779998',service:'botox',origin:'indicacao',temp:'hot',stage:'fechado',consultaResult:'sim',type:'procedimento',att:'Suellen',obs:'Retorno botox — atendida',createdAt:'2026-05-01T09:45:00.000Z',updatedAt:'2026-05-01T09:45:00.000Z'},
+  {id:'s11',name:'Ana Carolina',phone:'62985841121',service:'preenchimento',origin:'fab_story',temp:'warm',stage:'followup',fuLevel:2,type:'procedimento',att:'Suellen',obs:'P. Labial e Botox — parando de responder (Instagram)',createdAt:'2026-05-01T09:50:00.000Z',updatedAt:'2026-05-01T09:50:00.000Z'},
+  {id:'s12',name:'Isabella Fields',phone:'61996034161',service:'',origin:'indicacao',temp:'hot',stage:'followup',fuLevel:2,type:'procedimento',att:'Suellen',obs:'Parando de responder',createdAt:'2026-05-01T09:55:00.000Z',updatedAt:'2026-05-01T09:55:00.000Z'},
+  {id:'s13',name:'Juliana',phone:'62991467373',service:'botox',origin:'indicacao',temp:'hot',stage:'contato',type:'procedimento',att:'Suellen',obs:'Manutenção e botox — em andamento',createdAt:'2026-05-01T10:00:00.000Z',updatedAt:'2026-05-01T10:00:00.000Z'},
+  {id:'s14',name:'Mythali Garcia',phone:'62981336832',service:'outro',origin:'fab_story',temp:'warm',stage:'fechado',consultaResult:'sim',type:'procedimento',att:'Suellen',obs:'Avaliação — atendida (Instagram)',createdAt:'2026-05-01T10:05:00.000Z',updatedAt:'2026-05-01T10:05:00.000Z'},
+  {id:'s15',name:'Alicy Mota',phone:'62994044124',service:'preenchimento',origin:'fab_story',temp:'warm',stage:'followup',fuLevel:2,type:'procedimento',att:'Suellen',obs:'P. Labial e Rinomodelação — parando de responder (Instagram)',createdAt:'2026-05-01T10:10:00.000Z',updatedAt:'2026-05-01T10:10:00.000Z'},
+  {id:'s16',name:'Ana Carolina Paixão',phone:'62982137016',service:'full_face',origin:'indicacao',temp:'hot',stage:'fechado',consultaResult:'sim',type:'procedimento',att:'Suellen',obs:'Retorno Lifting — atendida',createdAt:'2026-05-01T10:15:00.000Z',updatedAt:'2026-05-01T10:15:00.000Z'},
+  {id:'s17',name:'Raquel Troncoso',phone:'62992548673',service:'outro',origin:'indicacao',temp:'hot',stage:'fechado',consultaResult:'sim',type:'procedimento',att:'Suellen',obs:'Manutenção — atendida',createdAt:'2026-05-01T10:20:00.000Z',updatedAt:'2026-05-01T10:20:00.000Z'},
+  {id:'s18',name:'Juliana Vale',phone:'62981003100',service:'botox',origin:'indicacao',temp:'hot',stage:'fechado',consultaResult:'sim',type:'procedimento',att:'Suellen',obs:'Retorno botox — atendida',createdAt:'2026-05-01T10:25:00.000Z',updatedAt:'2026-05-01T10:25:00.000Z'},
+  {id:'s19',name:'Eloiza Sanches',phone:'44997217008',service:'botox',origin:'indicacao',temp:'hot',stage:'fechado',consultaResult:'sim',type:'procedimento',att:'Suellen',obs:'Retorno botox — atendida',createdAt:'2026-05-01T10:30:00.000Z',updatedAt:'2026-05-01T10:30:00.000Z'},
+  {id:'s20',name:'Carol Nogueira',phone:'62984226240',service:'outro',origin:'indicacao',temp:'hot',stage:'fechado',consultaResult:'sim',type:'procedimento',att:'Suellen',obs:'Confirmação de horário — atendida',createdAt:'2026-05-01T10:35:00.000Z',updatedAt:'2026-05-01T10:35:00.000Z'},
+  {id:'s21',name:'Gabriela',phone:'62994924285',service:'full_face',origin:'fab_story',temp:'warm',stage:'followup',fuLevel:2,type:'procedimento',att:'Suellen',obs:'FullFace — parando de responder (Instagram)',createdAt:'2026-05-01T10:40:00.000Z',updatedAt:'2026-05-01T10:40:00.000Z'},
+  {id:'s22',name:'Ruana de Melo',phone:'62992680899',service:'outro',origin:'indicacao',temp:'hot',stage:'fechado',consultaResult:'sim',type:'procedimento',att:'Suellen',obs:'Confirmação de horário — atendida',createdAt:'2026-05-01T10:45:00.000Z',updatedAt:'2026-05-01T10:45:00.000Z'},
+  {id:'s23',name:'Mariza Ribeiro',phone:'62981614945',service:'full_face',origin:'indicacao',temp:'hot',stage:'fechado',consultaResult:'sim',type:'procedimento',att:'Suellen',obs:'Lifting — confirmação de horário, atendida',createdAt:'2026-05-01T10:50:00.000Z',updatedAt:'2026-05-01T10:50:00.000Z'},
+  {id:'s24',name:'Hevelyn Gomes',phone:'62994386249',service:'',origin:'indicacao',temp:'hot',stage:'novo',type:'procedimento',att:'Suellen',obs:'Sem status registrado',createdAt:'2026-05-01T10:55:00.000Z',updatedAt:'2026-05-01T10:55:00.000Z'},
+  {id:'s25',name:'Karine Gonçalves',phone:'62992408745',service:'full_face',origin:'indicacao',temp:'hot',stage:'fechado',consultaResult:'sim',type:'procedimento',att:'Suellen',obs:'Retorno Full Face — atendida',createdAt:'2026-05-01T11:00:00.000Z',updatedAt:'2026-05-01T11:00:00.000Z'},
+  {id:'s26',name:'Dani Troncoso',phone:'62981431100',service:'outro',origin:'indicacao',temp:'hot',stage:'fechado',consultaResult:'sim',type:'procedimento',att:'Suellen',obs:'Manutenção — atendida',createdAt:'2026-05-01T11:05:00.000Z',updatedAt:'2026-05-01T11:05:00.000Z'},
+  {id:'s27',name:'Silvia',phone:'62993007121',service:'preenchimento',origin:'fab_direct',temp:'warm',stage:'fechado',consultaResult:'sim',type:'procedimento',att:'Suellen',obs:'Realce lips — atendida (Tráfego)',createdAt:'2026-05-01T11:10:00.000Z',updatedAt:'2026-05-01T11:10:00.000Z'},
+  {id:'s28',name:'Milena Guerra',phone:'62981691243',service:'outro',origin:'indicacao',temp:'hot',stage:'fechado',consultaResult:'sim',type:'procedimento',att:'Suellen',obs:'Remoção de preenchedor labial — atendida',createdAt:'2026-05-01T11:15:00.000Z',updatedAt:'2026-05-01T11:15:00.000Z'},
+  {id:'s29',name:'Iôlany Haberkamp',phone:'51982139436',service:'botox',origin:'indicacao',temp:'hot',stage:'fechado',consultaResult:'sim',type:'procedimento',att:'Suellen',obs:'Retorno Botox — atendida',createdAt:'2026-05-01T11:20:00.000Z',updatedAt:'2026-05-01T11:20:00.000Z'},
+];
+
+function seedSuellenData(){
+  const key = 'lf2_leads_suellen';
+  const existing = localStorage.getItem(key);
+  if(!existing || JSON.parse(existing).length === 0){
+    localStorage.setItem(key, JSON.stringify(SUELLEN_SEED));
+  }
+}
+
+function resetDemoData(){
+  if(!confirm('Isso vai substituir os leads atuais pelos dados de Maio/2026 da planilha. Continuar?')) return;
+  localStorage.setItem('lf2_leads_suellen', JSON.stringify(SUELLEN_SEED));
+  renderKanban();
+  showToast('✓ Dados de Maio/2026 reimportados!');
+}
+
+// ════════════════════════════════════
+// INIT
+// ════════════════════════════════════
+function initApp(){
+  // Seed dados reais da Suellen (só se ainda não há leads)
+  if(S.clinic === 'suellen') seedSuellenData();
+
+  document.getElementById('page-login').classList.remove('active');
+  document.getElementById('page-app').classList.add('active');
+  // Mostrar botão reimportar só para ADM da Suellen
+  const btnReset = document.getElementById('btn-reset-demo');
+  if(btnReset) btnReset.style.display = (S.clinic==='suellen'&&S.role==='adm') ? 'flex' : 'none';
+  document.getElementById('sb-cname').textContent=S.clinicName;
+  document.getElementById('sb-uname').textContent=S.display+' · '+S.role.toUpperCase();
+  document.getElementById('kanban-sub').textContent=S.role==='adm'?'todos os leads':'seus leads';
+  if(S.role==='adm'){
+    document.getElementById('nav-dash').style.display='flex';
+    document.getElementById('nav-team').style.display='flex';
+    document.getElementById('nav-valores').style.display='flex';
+  }
+  // mentoria enabled for both clinics
+  document.getElementById('opt-mentoria').style.display='';
+  // theme label
+  const t=document.body.getAttribute('data-theme');
+  document.getElementById('theme-lbl').textContent=t==='dark'?'Modo claro':'Modo escuro';
+  renderKanban();
+}
+
+// ════════════════════════════════════
+// NAVIGATION
+// ════════════════════════════════════
+function showView(v,el){
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  if(el)el.classList.add('active');
+  document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
+  document.getElementById('view-'+v).classList.add('active');
+  closeSidebar();
+  if(v==='dashboard')renderDashboard();
+  if(v==='team')renderTeam();
+  if(v==='valores')renderValoresBase();
+}
+function toggleSidebar(){
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sb-overlay').classList.toggle('open');
+}
+function closeSidebar(){
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sb-overlay').classList.remove('open');
+}
+
+// ════════════════════════════════════
+// KANBAN
+// ════════════════════════════════════
+function renderKanban(){
+  const board=document.getElementById('kanban-board');
+  let leads=getLeads();
+
+  // Role filter
+  if(S.role==='comercial'){
+    leads=leads.filter(l=>l.att===S.display);
+    leads=leads.filter(l=>!['orcamento','fechado','demitido','recusado'].includes(l.stage)||l.type==='mentoria');
+  }
+
+  // Type filter
+  if(kanbanFilter!=='todos') leads=leads.filter(l=>(l.type||'procedimento')===kanbanFilter);
+
+  // Follow up alert (all followup leads, before type filter for badge accuracy)
+  const allLeads=getLeads();
+  const fuLeadsAll=(S.role==='comercial'?allLeads.filter(l=>l.att===S.display):allLeads).filter(l=>l.stage==='followup');
+  const fuAlert=document.getElementById('follow-alert');
+  const fuBadge=document.getElementById('follow-badge');
+  if(fuLeadsAll.length>0){
+    const fu3=fuLeadsAll.filter(l=>(l.fuLevel||1)>=3).length;
+    document.getElementById('follow-alert-text').textContent=`${fuLeadsAll.length} lead${fuLeadsAll.length>1?'s':''} em Follow Up${fu3>0?` — ${fu3} em nível crítico (FU3)`:''}. Lembre-se de enviar mensagem hoje!`;
+    fuAlert.classList.remove('hidden');
+    fuBadge.style.display='inline';
+    fuBadge.textContent=fuLeadsAll.length;
+  } else {
+    fuAlert.classList.add('hidden');
+    fuBadge.style.display='none';
+  }
+
+  // Determine columns based on filter
+  let stagesSet;
+  if(kanbanFilter==='mentoria'){
+    stagesSet=STAGES_MENT;
+  } else if(kanbanFilter==='procedimento'){
+    stagesSet=S.role==='adm'?STAGES_PROC_ADM:STAGES_PROC_COM;
+  } else {
+    // todos: use procedimento base columns (cleaner), mentoria cards show there too
+    if(S.role==='adm') stagesSet=STAGES_PROC_ADM;
+    else stagesSet=STAGES_PROC_COM;
+  }
+
+  board.innerHTML=stagesSet.map(stage=>{
+    const col=leads.filter(l=>l.stage===stage.id);
+    return `<div class="k-col">
+      <div class="k-col-head">
+        <div class="k-col-head-left">
+          <div class="k-dot" style="background:${stage.color}"></div>
+          <span class="k-col-label">${stage.label}</span>
+        </div>
+        <span class="k-badge">${col.length}</span>
+      </div>
+      <div class="k-col-body">
+        ${col.map(l=>renderCard(l)).join('')}
+        <div class="k-add-btn" onclick="openNewLeadStage('${stage.id}')">+ adicionar</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderCard(l){
+  const ori=ORIGINS[l.origin]||{icon:'?',label:l.origin};
+  const init=(l.name||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  const bg=AVA_COLORS[(l.name?.charCodeAt(0)||0)%AVA_COLORS.length];
+  const tmp=TEMPS[l.temp]||TEMPS.cold;
+  const services=normalizeServices(l);
+  const fuLevel=l.fuLevel||1;
+
+  // Serviços para exibir
+  const vals=getValores();
+  let svcLabel='';
+  if(services.includes('apenas_consulta')){
+    svcLabel='Apenas Consulta';
+  } else if(services.length>0){
+    const allProc=[...vals.proc,...vals.ment];
+    svcLabel=services.map(id=>{
+      const found=allProc.find(p=>p.id===id);
+      return found?found.label:(SERVICES[id]||id);
+    }).join(', ');
+  }
+
+  // Follow up card class
+  let fuClass='';
+  if(l.stage==='followup'){
+    if(fuLevel===1) fuClass='fu1';
+    else if(fuLevel===2) fuClass='fu2';
+    else fuClass='fu3';
+  }
+
+  let tags='';
+  if(l.consultaResult==='sim') tags+=`<span class="tag tag-consulta-sim">✓ Consulta ok</span>`;
+  if(l.consultaResult==='nao') tags+=`<span class="tag tag-consulta-nao">✗ Não compareceu</span>`;
+  if(l.jaConsultou) tags+=`<span class="tag tag-ja-consultou">↩ Já consultou</span>`;
+  if(l.type==='mentoria'&&kanbanFilter==='todos') tags+=`<span class="tag tag-mentoria">Mentoria</span>`;
+
+  // Follow up steps display
+  let fuHtml='';
+  if(l.stage==='followup'){
+    const stepColors=[
+      fuLevel>=1?'done':'',
+      fuLevel>=2?'done-red':'',
+      fuLevel>=3?'done-red':'',
+    ];
+    const labels=['FU1','FU2','FU3'];
+    fuHtml=`<div class="fu-counter" onclick="event.stopPropagation()">
+      ${labels.map((lbl,i)=>`<div class="fu-step ${stepColors[i]}" title="${lbl}" onclick="advanceFU(event,'${l.id}',${i+1})">${lbl}</div>`).join('')}
+      <span class="fu-label">${fuLevel===1?'1ª tentativa':fuLevel===2?'2ª tentativa':'⚠ 3ª tentativa'}</span>
+    </div>`;
+  }
+
+  return `<div class="lead-card ${fuClass}" onclick="openDetail('${l.id}')">
+    <div class="lc-top">
+      <div style="display:flex;align-items:center;gap:7px">
+        <div class="lc-ava" style="background:${bg}18;color:${bg};border-color:${bg}30">${init}</div>
+        <div><div class="lc-name">${l.name}</div><div class="lc-phone">${l.phone||'–'}</div></div>
+      </div>
+      <div class="temp-pip" style="background:${tmp.color}" title="${tmp.label}"></div>
+    </div>
+    <div class="lc-origin">${ori.icon} ${ori.label}</div>
+    ${fuHtml}
+    ${tags?`<div class="lc-tags">${tags}</div>`:''}
+    ${svcLabel?`<div style="font-size:10px;color:var(--text3);margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${svcLabel}</div>`:''}
+    <div class="lc-foot">
+      <span class="lc-time">${fmtDate(l.createdAt)}</span>
+      <span class="lc-att">${l.att||''}</span>
+    </div>
+  </div>`;
+}
+
+// ════════════════════════════════════
+// MODAL LEAD — chips de procedimentos
+// ════════════════════════════════════
+function buildChips(){
+  const type=document.getElementById('f-type').value;
+  const vals=getValores();
+  const procWrap=document.getElementById('f-proc-wrap');
+  const mentWrap=document.getElementById('f-ment-wrap');
+
+  if(type==='procedimento'){
+    procWrap.style.display='';
+    mentWrap.style.display='none';
+    const items=vals.proc;
+    document.getElementById('proc-chips').innerHTML=
+      `<div class="proc-chip apenas-consulta" onclick="toggleChip(this,'apenas_consulta','proc')">Apenas Consulta</div>`+
+      items.map(p=>`<div class="proc-chip" data-id="${p.id}" onclick="toggleChip(this,'${p.id}','proc')">${p.label}</div>`).join('');
+  } else {
+    procWrap.style.display='none';
+    mentWrap.style.display='';
+    const items=vals.ment;
+    document.getElementById('ment-chips').innerHTML=
+      items.map(m=>`<div class="proc-chip" data-id="${m.id}" onclick="toggleChip(this,'${m.id}','ment')">${m.label}</div>`).join('');
+  }
+  updatePotencialLabel();
+}
+
+function toggleChip(el, id, group){
+  if(group==='proc'){
+    // "apenas_consulta" é exclusivo com outros
+    if(id==='apenas_consulta'){
+      const wasSelected=el.classList.contains('sel');
+      document.querySelectorAll('#proc-chips .proc-chip').forEach(c=>c.classList.remove('sel'));
+      if(!wasSelected) el.classList.add('sel');
+    } else {
+      // desselecionar "apenas consulta" se selecionar outro
+      document.querySelectorAll('#proc-chips .apenas-consulta').forEach(c=>c.classList.remove('sel'));
+      el.classList.toggle('sel');
+    }
+  } else {
+    // mentoria: seleção única
+    const wasSelected=el.classList.contains('sel');
+    document.querySelectorAll('#ment-chips .proc-chip').forEach(c=>c.classList.remove('sel'));
+    if(!wasSelected) el.classList.add('sel');
+  }
+  updatePotencialLabel();
+}
+
+function getSelectedServices(group){
+  const container=group==='proc'?'#proc-chips':'#ment-chips';
+  return Array.from(document.querySelectorAll(`${container} .proc-chip.sel`)).map(c=>c.dataset.id||c.classList.contains('apenas-consulta')?'apenas_consulta':c.dataset.id).filter(Boolean);
+}
+
+function getSelectedServicesProc(){
+  return Array.from(document.querySelectorAll('#proc-chips .proc-chip.sel')).map(c=>{
+    if(c.classList.contains('apenas-consulta')) return 'apenas_consulta';
+    return c.dataset.id;
+  }).filter(Boolean);
+}
+function getSelectedServicesMent(){
+  return Array.from(document.querySelectorAll('#ment-chips .proc-chip.sel')).map(c=>c.dataset.id).filter(Boolean);
+}
+
+function updatePotencialLabel(){
+  const type=document.getElementById('f-type').value;
+  const lbl=document.getElementById('proc-potencial');
+  if(!lbl) return;
+  if(type!=='procedimento'){lbl.textContent='';return}
+  const svcs=getSelectedServicesProc();
+  if(!svcs.length){lbl.textContent='';return}
+  if(svcs.includes('apenas_consulta')){lbl.textContent='Potencial Inicial: entra no Potencial Real ao agendar consulta';lbl.style.color='var(--blue)';return}
+  const pot=calcPotencialInicial(svcs);
+  if(pot>0){
+    lbl.textContent='Potencial Inicial: R$ '+pot.toLocaleString('pt-BR',{minimumFractionDigits:2});
+    lbl.style.color='var(--green)';
+  } else {
+    lbl.textContent='Configure os valores em Valores Base para ver o potencial';
+    lbl.style.color='var(--text3)';
+  }
+}
+
+function setChipsFromServices(services, type){
+  if(type==='procedimento'){
+    document.querySelectorAll('#proc-chips .proc-chip').forEach(c=>{
+      if(c.classList.contains('apenas-consulta')){
+        c.classList.toggle('sel',services.includes('apenas_consulta'));
+      } else {
+        c.classList.toggle('sel',services.includes(c.dataset.id));
+      }
+    });
+  } else {
+    document.querySelectorAll('#ment-chips .proc-chip').forEach(c=>{
+      c.classList.toggle('sel',services.includes(c.dataset.id));
+    });
+  }
+  updatePotencialLabel();
+}
+function buildStageGrid(stages, sel){
+  document.getElementById('stage-grid').innerHTML=stages.map(s=>`
+    <div class="stage-opt ${s.id===sel?'sel':''}" onclick="selStage(this)">${s.label}</div>`).join('');
+}
+function selStage(el){
+  document.querySelectorAll('.stage-opt').forEach(e=>e.classList.remove('sel'));
+  el.classList.add('sel');
+}
+function getSelStage(type){
+  const stages=getStages(type,S.role);
+  const opts=document.querySelectorAll('.stage-opt');
+  const selEl=Array.from(opts).find(e=>e.classList.contains('sel'));
+  if(!selEl) return stages[0].id;
+  const idx=Array.from(opts).indexOf(selEl);
+  return stages[idx]?.id||stages[0].id;
+}
+function onTypeChange(){
+  const type=document.getElementById('f-type').value;
+  const stages=getStages(type,S.role);
+  const cur=document.querySelector('.stage-opt.sel');
+  const curLabel=cur?cur.textContent:'';
+  buildStageGrid(stages, stages[0].id);
+  const match=stages.find(s=>s.label===curLabel);
+  if(match){
+    document.querySelectorAll('.stage-opt').forEach(e=>{
+      e.classList.toggle('sel',e.textContent===curLabel);
+    });
+  }
+  buildChips();
+}
+function openNewLead(){
+  editId=null;
+  document.getElementById('ml-title').textContent='Novo Lead';
+  clearLeadForm();
+  const type=document.getElementById('f-type').value;
+  buildStageGrid(getStages(type,S.role),'novo');
+  buildChips();
+  if(S.role==='comercial'){document.getElementById('f-att').value=S.display;document.getElementById('f-att').readOnly=true;}
+  else document.getElementById('f-att').readOnly=false;
+  openOv('ov-lead');
+}
+function openNewLeadStage(stageId){
+  openNewLead();
+  document.querySelectorAll('.stage-opt').forEach(e=>{
+    const stages=getStages(document.getElementById('f-type').value,S.role);
+    const idx=stages.findIndex(s=>s.id===stageId);
+    e.classList.toggle('sel',Array.from(document.querySelectorAll('.stage-opt')).indexOf(e)===idx);
+  });
+}
+function clearLeadForm(){
+  ['f-name','f-phone','f-att','f-obs'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('f-origin').value='link_bio';
+  document.getElementById('f-type').value='procedimento';
+}
+function saveLead(){
+  const name=document.getElementById('f-name').value.trim();
+  if(!name){showToast('⚠ Nome é obrigatório');return}
+  const origin=document.getElementById('f-origin').value;
+  const type=document.getElementById('f-type').value;
+  const leads=getLeads();
+  const stage=getSelStage(type);
+  const services=type==='procedimento'?getSelectedServicesProc():getSelectedServicesMent();
+  const potencialInicial=type==='procedimento'?calcPotencialInicial(services):0;
+
+  if(editId){
+    const idx=leads.findIndex(x=>x.id===editId);
+    if(idx!==-1){
+      leads[idx]={...leads[idx],name,phone:v('f-phone'),att:v('f-att'),origin,type,
+        services,potencialInicial,
+        obs:v('f-obs'),stage,temp:autoTemp(origin),updatedAt:now()};
+    }
+  } else {
+    leads.push({id:'l_'+Date.now(),name,phone:v('f-phone'),att:v('f-att'),origin,type,
+      services,potencialInicial,obs:v('f-obs'),
+      stage,temp:autoTemp(origin),consultaResult:null,jaConsultou:false,
+      createdAt:now(),updatedAt:now()});
+  }
+  setLeads(leads);
+  closeOv('ov-lead');
+  renderKanban();
+  showToast(editId?'Lead atualizado':'Lead adicionado');
+  editId=null;
+}
+
+// ════════════════════════════════════
+// DETAIL MODAL
+// ════════════════════════════════════
+function openDetail(id){
+  const leads=getLeads();
+  const l=leads.find(x=>x.id===id);
+  if(!l) return;
+  const ori=ORIGINS[l.origin]||{icon:'?',label:l.origin};
+  const init=(l.name||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  const bg=AVA_COLORS[(l.name?.charCodeAt(0)||0)%AVA_COLORS.length];
+  const tmp=TEMPS[l.temp]||TEMPS.cold;
+  const stages=getStages(l.type,S.role);
+  const stageIdx=stages.findIndex(s=>s.id===l.stage);
+  const isConsultaStage = l.stage==='consulta' && l.type!=='mentoria';
+
+  let consultaHtml='';
+  if(isConsultaStage){
+    consultaHtml=`<div style="margin:12px 0">
+      <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Consulta realizada?</div>
+      <div class="consulta-btns">
+        <button class="consulta-btn yes ${l.consultaResult==='sim'?'active':''}" onclick="setConsulta('${id}','sim')">✓ Sim, compareceu</button>
+        <button class="consulta-btn no ${l.consultaResult==='nao'?'active':''}" onclick="setConsulta('${id}','nao')">✗ Não compareceu</button>
+      </div>
+    </div>`;
+  }
+
+  document.getElementById('detail-body').innerHTML=`
+    <div class="detail-hero">
+      <div class="detail-ava" style="background:${bg}18;color:${bg};border-color:${bg}30;font-size:15px;font-weight:700">${init}</div>
+      <div>
+        <div class="detail-name">${l.name}</div>
+        <div class="detail-phone">${l.phone||'Sem telefone'}</div>
+        <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
+          <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;background:${tmp.color}18;color:${tmp.color}">${tmp.label}</span>
+          ${l.jaConsultou?'<span class="tag tag-ja-consultou">↩ Já consultou</span>':''}
+          ${l.type==='mentoria'?'<span class="tag tag-mentoria">Mentoria</span>':''}
+        </div>
+      </div>
+    </div>
+    <div class="pipeline">
+      ${stages.map((s,i)=>`
+        <div class="pipe-step ${i<stageIdx?'done':i===stageIdx?'cur':''}" onclick="moveStage('${id}','${s.id}')">
+          <div class="pipe-dot"></div>${s.label}
+        </div>`).join('')}
+    </div>
+    ${consultaHtml}
+    <div class="info-row"><span class="info-k">Origem</span><span class="info-v">${ori.icon} ${ori.label}</span></div>
+    <div class="info-row"><span class="info-k">Atendente</span><span class="info-v">${l.att||'–'}</span></div>
+    <div class="info-row"><span class="info-k">Serviços</span><span class="info-v">${(()=>{
+      const svcs=normalizeServices(l);
+      if(!svcs.length) return 'Não identificado';
+      if(svcs.includes('apenas_consulta')) return 'Apenas Consulta';
+      const vals=getValores();
+      const all=[...vals.proc,...vals.ment];
+      return svcs.map(id=>all.find(p=>p.id===id)?.label||(SERVICES[id]||id)).join(', ');
+    })()}</span></div>
+    ${S.role==='adm'&&l.potencialInicial>0?`<div class="info-row"><span class="info-k">Potencial Inicial</span><span class="info-v" style="color:var(--green)">R$ ${parseFloat(l.potencialInicial).toLocaleString('pt-BR',{minimumFractionDigits:2})}</span></div>`:''}
+    <div class="info-row"><span class="info-k">Cadastrado</span><span class="info-v">${fmtFull(l.createdAt)}</span></div>
+    ${l.obs?`<div style="margin-top:12px"><div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">Observações</div><div style="background:var(--surface2);border-radius:var(--radius-xs);padding:10px 12px;font-size:12px;color:var(--text2);line-height:1.5">${l.obs}</div></div>`:''}
+  `;
+  const nextStage=getNextStage(l);
+  const canAdvance=nextStage&&!(S.role==='comercial'&&['orcamento','demitido','recusado'].includes(nextStage.id));
+  document.getElementById('detail-foot').innerHTML=`
+    <button class="btn btn-danger btn-sm" onclick="deleteLead('${id}')">Excluir</button>
+    <button class="btn btn-ghost btn-sm" onclick="closeOv('ov-detail')">Fechar</button>
+    <button class="btn btn-ghost btn-sm" onclick="editLead('${id}')">Editar</button>
+    ${canAdvance?`<button class="btn btn-primary btn-sm" onclick="advanceStage('${id}')">Avançar → ${nextStage.label}</button>`:''}
+  `;
+  openOv('ov-detail');
+}
+
+function setConsulta(id, result){
+  const leads=getLeads();
+  const idx=leads.findIndex(x=>x.id===id);
+  if(idx===-1) return;
+  leads[idx].consultaResult=result;
+  if(result==='sim'){
+    if(S.role==='adm') leads[idx].stage='orcamento';
+    // comercial keeps at consulta but tagged
+  } else {
+    leads[idx].stage='followup';
+    leads[idx].fuLevel=leads[idx].jaConsultou?1:(leads[idx].fuLevel||1); // reset or keep
+    leads[idx].jaConsultou=true;
+  }
+  leads[idx].updatedAt=now();
+  setLeads(leads);
+  closeOv('ov-detail');
+  renderKanban();
+  showToast(result==='sim'?'✓ Consulta confirmada!':'Lead voltou para Follow Up');
+}
+
+function advanceFU(event, id, level){
+  event.stopPropagation();
+  const leads=getLeads();
+  const idx=leads.findIndex(x=>x.id===id);
+  if(idx===-1) return;
+  const cur=leads[idx].fuLevel||1;
+  // toggle: clicking current level resets to previous, clicking next advances
+  leads[idx].fuLevel = level > cur ? level : Math.max(1, level-1);
+  leads[idx].updatedAt=now();
+  setLeads(leads);
+  renderKanban();
+}
+
+function getNextStage(l){
+  const stages=getStages(l.type||'procedimento', S.role);
+  const idx=stages.findIndex(s=>s.id===l.stage);
+  if(idx===-1||idx>=stages.length-1) return null;
+  return stages[idx+1];
+}
+
+function advanceStage(id){
+  const leads=getLeads();
+  const l=leads.find(x=>x.id===id);
+  if(!l) return;
+  const next=getNextStage(l);
+  if(!next){showToast('Lead já está na etapa final');return}
+  if(S.role==='comercial'&&['orcamento','demitido','recusado'].includes(next.id)){showToast('⚠ Sem permissão para esta etapa');return}
+  const idx=leads.findIndex(x=>x.id===id);
+  leads[idx].stage=next.id;
+  leads[idx].updatedAt=now();
+  setLeads(leads);
+  closeOv('ov-detail');
+  renderKanban();
+  showToast(`Avançou para: ${next.label}`);
+}
+
+function moveStage(id, stageId){
+  const leads=getLeads();
+  const idx=leads.findIndex(x=>x.id===id);
+  if(idx===-1) return;
+  // comercial can't move to adm stages
+  if(S.role==='comercial' && ['orcamento','demitido','recusado'].includes(stageId)){
+    showToast('⚠ Sem permissão para esta etapa');return;
+  }
+  leads[idx].stage=stageId;
+  leads[idx].updatedAt=now();
+  setLeads(leads);
+  closeOv('ov-detail');
+  renderKanban();
+  showToast('Etapa atualizada');
+}
+
+function editLead(id){
+  const leads=getLeads();
+  const l=leads.find(x=>x.id===id);
+  if(!l) return;
+  editId=id;
+  document.getElementById('ml-title').textContent='Editar Lead';
+  document.getElementById('f-name').value=l.name||'';
+  document.getElementById('f-phone').value=l.phone||'';
+  document.getElementById('f-att').value=l.att||'';
+  document.getElementById('f-origin').value=l.origin||'link_bio';
+  document.getElementById('f-type').value=l.type||'procedimento';
+  document.getElementById('f-obs').value=l.obs||'';
+  if(S.role==='comercial'){document.getElementById('f-att').readOnly=true;}
+  const stages=getStages(l.type||'procedimento',S.role);
+  buildStageGrid(stages, l.stage||stages[0].id);
+  buildChips();
+  // restaurar seleção de serviços
+  const services=normalizeServices(l);
+  setChipsFromServices(services, l.type||'procedimento');
+  closeOv('ov-detail');
+  openOv('ov-lead');
+}
+
+function deleteLead(id){
+  if(!confirm('Excluir este lead?')) return;
+  setLeads(getLeads().filter(x=>x.id!==id));
+  closeOv('ov-detail');
+  renderKanban();
+  showToast('Lead excluído');
+}
+
+// ════════════════════════════════════
+// DASHBOARD
+// ════════════════════════════════════
+function renderDashboard(){
+  const tickets=getTickets();
+  const hoje=new Date().toDateString();
+
+  // Apply type + period filters
+  let leads=getLeads();
+  if(dashFilter!=='todos') leads=leads.filter(l=>(l.type||'procedimento')===dashFilter);
+  leads=filterByPeriod(leads);
+
+  // All leads today (unfiltered by type for "hoje" counter)
+  const hjAll=filterByPeriod(getLeads()).filter(l=>new Date(l.createdAt).toDateString()===hoje).length;
+
+  const total=leads.length;
+  const fechados=leads.filter(l=>l.stage==='fechado').length;
+  const perdidos=leads.filter(l=>['demitido','recusado'].includes(l.stage)).length;
+  const conv=total>0?Math.round(fechados/total*100):0;
+  const fuCount=leads.filter(l=>l.stage==='followup').length;
+
+  // Potencial Inicial = soma dos procedimentos selecionados pelos leads ativos
+  const activeStages=['novo','contato','followup','consulta','orcamento','proposta'];
+  const activeLeads=leads.filter(l=>activeStages.includes(l.stage));
+  const potInicialTotal=activeLeads.reduce((s,l)=>s+(l.potencialInicial||0),0);
+
+  // Potencial Real = ticket médio × leads que chegaram em Consulta Agendada (ou além)
+  const consultaStages=['consulta','orcamento','fechado'];
+  const leadsComConsulta=leads.filter(l=>consultaStages.includes(l.stage)||l.consultaResult==='sim');
+  const ticketRef=dashFilter==='mentoria'?tickets.ment:tickets.proc;
+  const potReal=ticketRef>0?leadsComConsulta.length*ticketRef:0;
+
+  // Receita fechada real
+  const rec=leads.filter(l=>l.stage==='fechado'&&l.value).reduce((s,l)=>s+parseFloat(l.value||0),0);
+
+  // Origins
+  const oriCnt={};
+  leads.forEach(l=>{oriCnt[l.origin]=(oriCnt[l.origin]||0)+1;});
+  const oriList=Object.entries(oriCnt).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const maxOri=oriList[0]?.[1]||1;
+
+  // Groups
+  const grp={nos:0,fab:0};
+  leads.forEach(l=>{const g=ORIGINS[l.origin]?.group;if(g)grp[g]++;});
+
+  // Temp
+  const tc={hot:0,warm:0,cold:0,cool:0};
+  leads.forEach(l=>{if(tc[l.temp]!==undefined)tc[l.temp]++;});
+  const tcMax=Math.max(...Object.values(tc),1);
+
+  // Attendant
+  const attCnt={};const attFch={};
+  leads.forEach(l=>{
+    if(!l.att)return;
+    attCnt[l.att]=(attCnt[l.att]||0)+1;
+    if(l.stage==='fechado')attFch[l.att]=(attFch[l.att]||0)+1;
+  });
+  const attList=Object.entries(attCnt).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const maxAtt=attList[0]?.[1]||1;
+
+  // Negociação breakdown by stage
+  const negStages=[
+    {id:'novo',label:'Novos',color:'#6BA3D6'},
+    {id:'contato',label:'Em Contato',color:'#F0A830'},
+    {id:'followup',label:'Follow Up',color:'#A87ED4'},
+    {id:'consulta',label:'Consulta Agendada',color:'#4CAF7D'},
+    {id:'orcamento',label:'Orçamento',color:'#C4A97D'},
+    {id:'proposta',label:'Proposta',color:'#6BA3D6'},
+  ];
+  const negBreakdown=negStages.map(s=>({...s,n:activeLeads.filter(l=>l.stage===s.id).length})).filter(s=>s.n>0);
+  const maxNeg=Math.max(...negBreakdown.map(s=>s.n),1);
+
+  const fmtR=(val)=>val>0?'R$ '+val.toLocaleString('pt-BR',{maximumFractionDigits:0}):'R$ 0';
+
+  document.getElementById('dash-body').innerHTML=`
+    <div class="dash-grid">
+      <div class="dash-stat">
+        <div class="ds-val" style="color:var(--blue)">${total}</div>
+        <div class="ds-lbl">Total de leads</div>
+        <div class="ds-delta">+${hjAll} hoje</div>
+      </div>
+      <div class="dash-stat">
+        <div class="ds-val" style="color:var(--green)">${fechados}</div>
+        <div class="ds-lbl">Fechados</div>
+        <div class="ds-delta">${conv}% conversão</div>
+      </div>
+      <div class="dash-stat">
+        <div class="ds-val" style="color:var(--amber)">${fuCount}</div>
+        <div class="ds-lbl">Follow Up</div>
+        <div class="ds-delta">${fuCount>0?'⚠ atenção':''}</div>
+      </div>
+      <div class="dash-stat">
+        <div class="ds-val" style="color:var(--accent)">${fmtR(rec)}</div>
+        <div class="ds-lbl">Receita fechada</div>
+      </div>
+    </div>
+
+    <!-- POTENCIAL INICIAL vs REAL -->
+    <div class="dash-card" style="margin-bottom:12px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px">
+        <div>
+          <div class="dash-card-title" style="margin-bottom:4px">Potencial do Pipeline</div>
+          <div style="font-size:10px;color:var(--text3)">${activeLeads.length} leads ativos · ${leadsComConsulta.length} com consulta agendada</div>
+        </div>
+        <button onclick="openTicketModal()" style="font-size:11px;color:var(--accent);background:var(--accent-light);border:1px solid var(--accent);border-radius:6px;padding:4px 10px;cursor:pointer;font-family:var(--font-body)">⚙ Ticket médio</button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-top:16px">
+        <div style="background:var(--surface2);border-radius:10px;padding:14px">
+          <div style="font-size:10px;color:var(--text3);margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px">Potencial Inicial</div>
+          <div style="font-family:var(--font-title);font-size:20px;font-weight:700;color:var(--blue)">${fmtR(potInicialTotal)}</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:3px">soma dos procedimentos escolhidos</div>
+        </div>
+        <div style="background:var(--surface2);border-radius:10px;padding:14px${potReal>0?';border:1px solid var(--green)':''}">
+          <div style="font-size:10px;color:${potReal>0?'var(--green)':'var(--text3)'};margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px;font-weight:${potReal>0?'700':'400'}">Potencial Real</div>
+          <div style="font-family:var(--font-title);font-size:20px;font-weight:700;color:${potReal>0?'var(--green)':'var(--text3)'}">
+            ${potReal>0?fmtR(potReal):`${ticketRef>0?leadsComConsulta.length+' × '+fmtR(ticketRef):'–'}`}
+          </div>
+          <div style="font-size:10px;color:var(--text3);margin-top:3px">${ticketRef>0?'ticket médio × consultas agendadas':'configure o ticket médio'}</div>
+        </div>
+      </div>
+      ${negBreakdown.length>0?`
+      <div style="margin-top:14px">
+        <div style="font-size:10px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Por etapa</div>
+        ${negBreakdown.map(s=>`
+          <div class="bar-row">
+            <span class="bar-lbl">${s.label}</span>
+            <div class="bar-track"><div class="bar-fill" style="width:${Math.round(s.n/maxNeg*100)}%;background:${s.color}"></div></div>
+            <span class="bar-n">${s.n}</span>
+          </div>`).join('')}
+      </div>`:''}
+    </div>
+
+    <div class="dash-2col">
+      <div class="dash-card">
+        <div class="dash-card-title">Origem dos Leads</div>
+        ${oriList.map(([k,n])=>{
+          const o=ORIGINS[k]||{icon:'?',label:k};
+          const pct=Math.round(n/maxOri*100);
+          const cs=['#6BA3D6','#4CAF7D','#F0A830','#A87ED4','#E06060','#C4A97D'];
+          const ci=Object.keys(ORIGINS).indexOf(k)%cs.length;
+          return `<div class="bar-row"><span class="bar-lbl">${o.icon} ${o.label}</span><div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${cs[ci]}"></div></div><span class="bar-n">${n}</span></div>`;
+        }).join('')||'<div style="color:var(--text3);font-size:12px;padding:16px 0;text-align:center">Sem dados no período</div>'}
+      </div>
+      <div class="dash-card">
+        <div class="dash-card-title">Fábrica vs Orgânico</div>
+        ${buildDonut([{label:'Vieram até nós',v:grp.nos,c:'#4CAF7D'},{label:'Fábrica de Contatos',v:grp.fab,c:'#6BA3D6'}])}
+      </div>
+    </div>
+    <div class="dash-2col">
+      <div class="dash-card">
+        <div class="dash-card-title">Temperatura</div>
+        <div class="temp-cols">
+          ${[{k:'hot',l:'Quente',c:'#E06060'},{k:'warm',l:'Morno',c:'#F0A830'},{k:'cold',l:'Frio',c:'#6BA3D6'},{k:'cool',l:'Esfriando',c:'#A87ED4'}].map(t=>{
+            const h=Math.max(Math.round(tc[t.k]/tcMax*72),4);
+            return `<div class="tc"><div class="tc-val" style="color:${t.c}">${tc[t.k]}</div><div style="flex:1;display:flex;align-items:flex-end;width:100%"><div class="tc-bar" style="height:${h}px;background:${t.c}30;border-top:2px solid ${t.c}"></div></div><div class="tc-lbl">${t.l}</div></div>`;
+          }).join('')}
+        </div>
+      </div>
+      <div class="dash-card">
+        <div class="dash-card-title">Ranking Atendentes</div>
+        ${attList.map(([name,cnt],i)=>{
+          const f=attFch[name]||0;
+          const p=Math.round(cnt/maxAtt*100);
+          const m=['🥇','🥈','🥉','4°','5°'];
+          return `<div class="rank-item"><span class="rank-pos">${m[i]}</span><span class="rank-name">${name}</span><div style="flex:1;background:var(--border);border-radius:2px;height:3px;margin:0 8px"><div style="width:${p}%;height:100%;background:var(--accent);border-radius:2px"></div></div><span class="rank-stat">${cnt} / ${f} fech.</span></div>`;
+        }).join('')||'<div style="color:var(--text3);font-size:12px;padding:16px 0;text-align:center">Sem dados</div>'}
+      </div>
+    </div>
+  `;
+}
+
+function openTicketModal(){
+  const t=getTickets();
+  document.getElementById('tk-proc').value=t.proc||'';
+  document.getElementById('tk-ment').value=t.ment||'';
+  openOv('ov-ticket');
+}
+function saveTickets2(){
+  saveTickets({
+    proc:parseFloat(document.getElementById('tk-proc').value)||0,
+    ment:parseFloat(document.getElementById('tk-ment').value)||0,
+  });
+  closeOv('ov-ticket');
+  renderDashboard();
+  showToast('Ticket médio salvo');
+}
+
+function buildDonut(data){
+  const total=data.reduce((s,d)=>s+d.v,0);
+  if(!total) return '<div style="color:var(--text3);font-size:12px">Sem dados</div>';
+  const r=32;const circ=2*Math.PI*r;let off=0;
+  const paths=data.map(d=>{
+    const pct=d.v/total;const dash=pct*circ;const gap=circ-dash;const rot=off*360;off+=pct;
+    return `<circle cx="40" cy="40" r="${r}" fill="none" stroke="${d.c}" stroke-width="12" stroke-dasharray="${dash} ${gap}" stroke-dashoffset="${circ*.25}" transform="rotate(${rot-90} 40 40)" opacity=".85"/>`;
+  }).join('');
+  const legend=data.map(d=>`<div class="donut-item"><div class="donut-dot" style="background:${d.c}"></div><span style="color:var(--text2);flex:1">${d.label}</span><span style="color:var(--text3);font-weight:700">${total>0?Math.round(d.v/total*100):0}%</span></div>`).join('');
+  return `<div class="donut-wrap"><svg width="80" height="80" viewBox="0 0 80 80"><circle cx="40" cy="40" r="${r}" fill="none" stroke="var(--surface3)" stroke-width="12"/>${paths}<text x="40" y="40" text-anchor="middle" dominant-baseline="middle" fill="var(--text)" font-size="13" font-weight="700" font-family="Playfair Display,serif">${total}</text></svg><div class="donut-legend">${legend}</div></div>`;
+}
+
+// ════════════════════════════════════
+// VALORES BASE (ADM)
+// ════════════════════════════════════
+function renderValoresBase(){
+  const vals=getValores();
+  document.getElementById('valores-body').innerHTML=`
+    <div class="dash-card" style="margin-bottom:14px">
+      <div class="dash-card-title">Procedimentos Estéticos</div>
+      <p style="font-size:11px;color:var(--text3);margin-bottom:14px;line-height:1.5">Esses valores são usados para calcular o <strong>Potencial Inicial</strong> no cadastro de cada lead e no Dashboard.</p>
+      ${vals.proc.map(p=>`
+        <div class="vb-item">
+          <span class="vb-name">${p.label}</span>
+          <input class="vb-input" type="number" id="vb-proc-${p.id}" value="${p.valor||''}" placeholder="R$ 0">
+        </div>`).join('')}
+    </div>
+    <div class="dash-card">
+      <div class="dash-card-title">Mentorias</div>
+      <p style="font-size:11px;color:var(--text3);margin-bottom:14px;line-height:1.5">Pacotes de mentoria disponíveis. Você pode renomear as labels diretamente na tela quando quiser.</p>
+      ${vals.ment.map(m=>`
+        <div class="vb-item">
+          <input style="flex:1;background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius-xs);padding:6px 10px;font-size:12px;color:var(--text);outline:none;font-family:var(--font-body)" 
+            id="vb-ment-label-${m.id}" value="${m.label}" placeholder="Nome do pacote">
+          <input class="vb-input" type="number" id="vb-ment-${m.id}" value="${m.valor||''}" placeholder="R$ 0">
+        </div>`).join('')}
+    </div>
+  `;
+}
+
+function saveValoresBase(){
+  const vals=getValores();
+  const proc=vals.proc.map(p=>({
+    ...p,
+    valor:parseFloat(document.getElementById(`vb-proc-${p.id}`)?.value)||0
+  }));
+  const ment=vals.ment.map(m=>{
+    const newLabel=document.getElementById(`vb-ment-label-${m.id}`)?.value||m.label;
+    const newValor=parseFloat(document.getElementById(`vb-ment-${m.id}`)?.value)||0;
+    // Atualizar label no MENT_DEFAULTS (session only — persiste no localStorage)
+    return {...m, label:newLabel, valor:newValor};
+  });
+  // Salvar labels das mentorias
+  const d={proc:{},ment:{}};
+  proc.forEach(p=>d.proc[p.id]=p.valor);
+  ment.forEach(m=>{d.ment[m.id]={valor:m.valor,label:m.label};});
+  localStorage.setItem(kValores(S.clinic),JSON.stringify(d));
+  // Atualizar MENT_DEFAULTS em memória para esta sessão
+  ment.forEach(m=>{const idx=MENT_DEFAULTS.findIndex(x=>x.id===m.id);if(idx!==-1)MENT_DEFAULTS[idx].label=m.label;});
+  showToast('✓ Valores salvos!');
+  renderValoresBase();
+}
+
+// Ajustar getValores para ler labels customizados das mentorias
+function getValores(){
+  try{
+    const d=JSON.parse(localStorage.getItem(kValores(S.clinic))||'{}');
+    return {
+      proc: PROC_DEFAULTS.map(p=>({...p,valor:d.proc?.[p.id]||0})),
+      ment: MENT_DEFAULTS.map(m=>({
+        ...m,
+        valor:typeof d.ment?.[m.id]==='object'?d.ment[m.id].valor:(d.ment?.[m.id]||0),
+        label:typeof d.ment?.[m.id]==='object'?d.ment[m.id].label:m.label,
+      })),
+    };
+  }catch{return {proc:PROC_DEFAULTS.map(p=>({...p})),ment:MENT_DEFAULTS.map(m=>({...m}))};}
+}
+function renderTeam(){
+  const users=getUsers(S.clinic);
+  document.getElementById('team-body').innerHTML=`
+    <div class="team-list">
+      ${users.map((u,i)=>`
+        <div class="team-item">
+          <div class="team-item-left">
+            <div class="team-ava">${(u.display||u.user).charAt(0).toUpperCase()}</div>
+            <div>
+              <div class="team-name">${u.display||u.user}</div>
+              <div class="team-role">@${u.user}</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="role-badge role-${u.role}">${u.role.toUpperCase()}</span>
+            <button class="btn-icon" onclick="editUser(${i})" title="Editar">
+              <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>
+            <button class="btn-icon" onclick="deleteUser(${i})" title="Excluir" style="color:var(--red)">
+              <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+            </button>
+          </div>
+        </div>`).join('')}
+    </div>`;
+}
+
+function openNewUser(){
+  editUserId=null;
+  document.getElementById('mu-title').textContent='Novo Usuário';
+  ['u-display','u-user','u-pass'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('u-role').value='comercial';
+  openOv('ov-user');
+}
+function editUser(idx){
+  const users=getUsers(S.clinic);
+  const u=users[idx];
+  editUserId=idx;
+  document.getElementById('mu-title').textContent='Editar Usuário';
+  document.getElementById('u-display').value=u.display||'';
+  document.getElementById('u-user').value=u.user||'';
+  document.getElementById('u-pass').value=u.pass||'';
+  document.getElementById('u-role').value=u.role||'comercial';
+  openOv('ov-user');
+}
+function saveUser(){
+  const display=document.getElementById('u-display').value.trim();
+  const user=document.getElementById('u-user').value.trim().toLowerCase();
+  const pass=document.getElementById('u-pass').value;
+  const role=document.getElementById('u-role').value;
+  if(!display||!user||!pass){showToast('⚠ Preencha todos os campos');return}
+  const users=getUsers(S.clinic);
+  if(editUserId!==null){
+    users[editUserId]={...users[editUserId],display,user,pass,role};
+  } else {
+    if(users.find(u=>u.user===user)){showToast('⚠ Usuário já existe');return}
+    users.push({display,user,pass,role});
+  }
+  setUsers(S.clinic,users);
+  closeOv('ov-user');
+  renderTeam();
+  showToast(editUserId!==null?'Usuário atualizado':'Usuário criado');
+  editUserId=null;
+}
+function deleteUser(idx){
+  const users=getUsers(S.clinic);
+  if(users[idx]?.user===S.user){showToast('⚠ Você não pode excluir seu próprio usuário');return}
+  if(!confirm(`Excluir usuário "${users[idx]?.display}"?`)) return;
+  users.splice(idx,1);
+  setUsers(S.clinic,users);
+  renderTeam();
+  showToast('Usuário excluído');
+}
+
+// ════════════════════════════════════
+// HELPERS
+// ════════════════════════════════════
+function v(id){return document.getElementById(id)?.value||''}
+function now(){return new Date().toISOString()}
+function openOv(id){document.getElementById(id).classList.add('open')}
+function closeOv(id){document.getElementById(id).classList.remove('open')}
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.style.display='block';
+  setTimeout(()=>t.style.display='none',2500);
+}
+function fmtDate(iso){
+  if(!iso) return '';
+  const d=new Date(iso);const now2=new Date();
+  if(d.toDateString()===now2.toDateString()) return 'hoje '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  const y=new Date(now2);y.setDate(y.getDate()-1);
+  if(d.toDateString()===y.toDateString()) return 'ontem';
+  return d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
+}
+function fmtFull(iso){
+  if(!iso) return '';
+  return new Date(iso).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+}
+// close on overlay click
+document.querySelectorAll('.overlay').forEach(o=>{
+  o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open')});
+});
+// init theme label
+document.getElementById('theme-lbl').textContent=document.body.getAttribute('data-theme')==='dark'?'Modo claro':'Modo escuro';
+</script>
+</body>
+</html>
