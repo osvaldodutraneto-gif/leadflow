@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LeadFlow</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 
@@ -489,9 +490,9 @@ input,select,textarea,button{font-family:var(--font-body)}
         <span id="theme-lbl">Modo escuro</span>
         <div class="toggle-track"><div class="toggle-thumb"></div></div>
       </button>
-      <button class="btn-logout" id="btn-reset-demo" onclick="resetDemoData()" style="display:none;font-size:11px;color:var(--amber);opacity:.7;margin-bottom:2px">
-        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.95"/></svg>
-        Reimportar dados Maio
+      <button class="btn-logout" onclick="openTrocarSenha()" style="color:var(--sidebar-text)">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        Trocar senha
       </button>
       <button class="btn-logout" onclick="doLogout()">
         <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
@@ -692,49 +693,79 @@ input,select,textarea,button{font-family:var(--font-body)}
   </div>
 </div>
 </div>
+<!-- ══ MODAL TROCAR SENHA ══ -->
+<div class="overlay" id="ov-senha">
+<div class="modal">
+  <div class="modal-head">
+    <span class="modal-title">Trocar Senha</span>
+    <button class="modal-close" onclick="closeOv('ov-senha')">✕</button>
+  </div>
+  <div class="modal-body">
+    <div class="ff"><label>Senha atual</label><input type="password" id="senha-atual" placeholder="••••"></div>
+    <div class="ff"><label>Nova senha</label><input type="password" id="senha-nova" placeholder="••••"></div>
+    <div class="ff"><label>Confirmar nova senha</label><input type="password" id="senha-conf" placeholder="••••"></div>
+  </div>
+  <div class="modal-foot">
+    <button class="btn btn-ghost" onclick="closeOv('ov-senha')">Cancelar</button>
+    <button class="btn btn-primary" onclick="salvarSenha()">Salvar</button>
+  </div>
+</div>
+</div>
 <div class="toast" id="toast"></div>
 
 <script>
 // ═══════════════════════════════════════════
 // DATA & CONFIG
 // ═══════════════════════════════════════════
-const DEFAULT_USERS = {
-  heloisa: [
-    {user:'osvaldo',pass:'1234',role:'adm',display:'Osvaldo'},
-    {user:'heloisa',pass:'1234',role:'adm',display:'Heloísa'},
-    {user:'comercial1',pass:'1234',role:'comercial',display:'Comercial 1'},
-  ],
-  suellen: [
-    {user:'danilo',pass:'1234',role:'adm',display:'Danilo'},
-    {user:'suellen',pass:'1234',role:'adm',display:'Suellen'},
-    {user:'comercial1',pass:'1234',role:'comercial',display:'Comercial 1'},
-  ]
+
+// ── Supabase config por clínica ──
+const SUPABASE_CONFIGS = {
+  heloisa: {
+    url: 'https://hskbxzhtxapriezjozym.supabase.co',
+    anon: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhza2J4emh0eGFwcmllempvenltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzNzUwOTEsImV4cCI6MjA5NDk1MTA5MX0.RsgheZS0vEPagqgDX86FQZAISztEbqI34UNTNfo2Y14',
+  },
+  suellen: {
+    url: 'https://xwyeakkfkoonyhbkknwn.supabase.co',
+    anon: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh3eWVha2tma29vbnloYmtrbnduIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzNzY5MzYsImV4cCI6MjA5NDk1MjkzNn0.3LpZnl5DWLPT7K-REn0gLpYYUMBFpZSFUL1eff-N4iI',
+  }
 };
+let db = null; // Supabase client ativo
+
+function initSupabase(clinic) {
+  const cfg = SUPABASE_CONFIGS[clinic];
+  if(!cfg) return null;
+  db = supabase.createClient(cfg.url, cfg.anon);
+  return db;
+}
+
 const CLINIC_NAMES = {heloisa:'Clínica Heloisa Santos',suellen:'Clínica Dra. Suellen Garcia'};
 
-// Stages per flow per role
-const STAGES_PROC_COM = [
+// ── Stages — ADM e Comercial agora iguais, sem orcamento/fechado ──
+// "Confirmado" = consulta aceita (proc) ou proposta aceita (ment)
+const STAGES_PROC = [
   {id:'novo',       label:'Novo Lead',         color:'#6BA3D6'},
   {id:'contato',    label:'Em Contato',        color:'#F0A830'},
   {id:'followup',   label:'Follow Up',         color:'#A87ED4'},
   {id:'consulta',   label:'Consulta Agendada', color:'#4CAF7D'},
+  {id:'confirmado', label:'Confirmado',        color:'#2D7A4F'},
 ];
-const STAGES_PROC_ADM = [
-  {id:'novo',       label:'Novo Lead',         color:'#6BA3D6'},
-  {id:'contato',    label:'Em Contato',        color:'#F0A830'},
-  {id:'followup',   label:'Follow Up',         color:'#A87ED4'},
-  {id:'consulta',   label:'Consulta Agendada', color:'#4CAF7D'},
-  {id:'orcamento',  label:'Tratamento/Orçam.', color:'#C4A97D'},
-  {id:'fechado',    label:'Fechado',           color:'#2D7A4F'},
-  {id:'demitido',   label:'Cliente Demitido',  color:'#B03A2E'},
-];
+const STAGES_PROC_COM = STAGES_PROC; // Mesmos para todos
+const STAGES_PROC_ADM = STAGES_PROC;
 const STAGES_MENT = [
   {id:'novo',       label:'Novo Lead',         color:'#6BA3D6'},
   {id:'contato',    label:'Em Contato',        color:'#F0A830'},
   {id:'followup',   label:'Follow Up',         color:'#A87ED4'},
   {id:'proposta',   label:'Proposta Enviada',  color:'#C4A97D'},
-  {id:'fechado',    label:'Fechado',           color:'#2D7A4F'},
-  {id:'recusado',   label:'Recusado',          color:'#B03A2E'},
+  {id:'confirmado', label:'Confirmado',        color:'#2D7A4F'},
+];
+// Kanban "Todos" — view unificada
+const STAGES_TODOS = [
+  {id:'novo',       label:'Novo Lead',         color:'#6BA3D6'},
+  {id:'contato',    label:'Em Contato',        color:'#F0A830'},
+  {id:'followup',   label:'Follow Up',         color:'#A87ED4'},
+  {id:'consulta',   label:'Consulta Agendada', color:'#4CAF7D'},
+  {id:'proposta',   label:'Proposta',          color:'#C4A97D'},
+  {id:'confirmado', label:'Confirmado ✓',      color:'#2D7A4F'},
 ];
 
 const ORIGINS = {
@@ -783,17 +814,13 @@ function filterByPeriod(leads){
   const now=new Date();
   if(dashPeriod==='tudo') return leads;
   return leads.filter(l=>{
-    const d=new Date(l.createdAt);
+    const d=new Date(l.createdAt||l.created_at);
     if(dashPeriod==='mes') return d.getFullYear()===now.getFullYear()&&d.getMonth()===now.getMonth();
     if(dashPeriod==='tri'){const t=new Date(now);t.setMonth(t.getMonth()-3);return d>=t;}
     if(dashPeriod==='ano') return d.getFullYear()===now.getFullYear();
     return true;
   });
 }
-
-function kTicketKey(c){ return 'lf2_ticket_'+c; }
-function getTickets(){ try{return JSON.parse(localStorage.getItem(kTicketKey(S.clinic))||'{"proc":0,"ment":0}');}catch{return {proc:0,ment:0};} }
-function saveTickets(d){ localStorage.setItem(kTicketKey(S.clinic), JSON.stringify(d)); }
 
 function setKanbanFilter(f, el){
   kanbanFilter = f;
@@ -822,12 +849,23 @@ const MENT_DEFAULTS = [
   {id:'ment_premium', label:'Mentoria Premium',     valor:0},
 ];
 
-function kValores(c){return `lf2_valores_${c}`}
-function setValores(proc,ment){
-  const d={proc:{},ment:{}};
-  proc.forEach(p=>d.proc[p.id]=p.valor);
-  ment.forEach(m=>d.ment[m.id]=m.valor);
-  localStorage.setItem(kValores(S.clinic),JSON.stringify(d));
+// getValores usa cache em memória (carregado ao abrir chips)
+// Se não houver cache, retorna defaults zerados
+function getValores(){
+  const proc = window._valoresProc || PROC_DEFAULTS.map(p=>({...p,valor:0}));
+  const ment = window._valuesMent || MENT_DEFAULTS.map(m=>({...m,valor:0}));
+  return {proc, ment};
+}
+
+// Carregar valores ao iniciar sessão (para chips de procedimentos)
+async function loadValoresCache(){
+  const vb = await getValoresDb();
+  window._valoresProc = PROC_DEFAULTS.map(p=>({...p,valor:vb.proc?.[p.id]||0}));
+  window._valuesMent = MENT_DEFAULTS.map(m=>({
+    ...m,
+    valor:typeof vb.ment?.[m.id]==='object'?vb.ment[m.id].valor:(vb.ment?.[m.id]||0),
+    label:typeof vb.ment?.[m.id]==='object'?vb.ment[m.id].label:m.label,
+  }));
 }
 function getValorProc(id){
   const v=getValores();
@@ -845,18 +883,80 @@ function normalizeServices(l){
   if(l.service) return [l.service];
   return [];
 }
-function kLeads(c){return `lf2_leads_${c}`}
-function kUsers(c){return `lf2_users_${c}`}
-function getLeads(){return JSON.parse(localStorage.getItem(kLeads(S.clinic))||'[]')}
-function setLeads(d){localStorage.setItem(kLeads(S.clinic),JSON.stringify(d))}
-function getUsers(c){
-  const stored = localStorage.getItem(kUsers(c));
-  if(stored) return JSON.parse(stored);
-  const def = DEFAULT_USERS[c]||[];
-  localStorage.setItem(kUsers(c),JSON.stringify(def));
-  return def;
+// ── Storage — Supabase ──
+async function getLeads(){
+  if(!db) return [];
+  const {data,error} = await db.from('leads').select('*').eq('clinic_id',S.clinic).order('created_at',{ascending:false});
+  if(error){console.error('getLeads',error);return [];}
+  return (data||[]).map(dbToLead);
 }
-function setUsers(c,d){localStorage.setItem(kUsers(c),JSON.stringify(d))}
+async function setLeads(leads){ /* não usado diretamente — usar upsertLead/deleteLead */ }
+
+async function upsertLead(lead){
+  const row = leadToDb(lead);
+  const {error} = await db.from('leads').upsert(row,{onConflict:'id'});
+  if(error) console.error('upsertLead',error);
+}
+async function deleteLead_db(id){
+  const {error} = await db.from('leads').delete().eq('id',id);
+  if(error) console.error('deleteLead',error);
+}
+
+async function getUsers_db(clinic){
+  const {data,error} = await db.from('users').select('*').eq('clinic_id',clinic);
+  if(error){console.error('getUsers',error);return [];}
+  return (data||[]).map(u=>({user:u.user_login,pass:u.pass,role:u.role,display:u.display,id:u.id}));
+}
+async function upsertUser(u, clinic){
+  const row = {clinic_id:clinic,user_login:u.user,pass:u.pass,display:u.display,role:u.role};
+  if(u.id) row.id=u.id;
+  const {error} = await db.from('users').upsert(row,{onConflict:'clinic_id,user_login'});
+  if(error) console.error('upsertUser',error);
+}
+async function deleteUser_db(id){
+  const {error} = await db.from('users').delete().eq('id',id);
+  if(error) console.error('deleteUser',error);
+}
+
+// ── Valores Base via Supabase ──
+async function getValoresDb(){
+  const {data} = await db.from('valores_base').select('*').eq('clinic_id',S.clinic).maybeSingle();
+  return data || {proc:{},ment:{},ticket_proc:0,ticket_ment:0};
+}
+async function saveValoresDb(vb){
+  await db.from('valores_base').upsert({clinic_id:S.clinic,...vb},{onConflict:'clinic_id'});
+}
+
+// ── Conversão db row ↔ app object ──
+function dbToLead(r){
+  return {
+    id:r.id, name:r.name, phone:r.phone||'', att:r.att||'',
+    origin:r.origin||'indicacao', type:r.type||'procedimento',
+    services: Array.isArray(r.services)?r.services:(r.services||[]),
+    potencialInicial:parseFloat(r.potencial_inicial||0),
+    stage:r.stage||'novo', fuLevel:r.fu_level||1, temp:r.temp||'cold',
+    consultaResult:r.consulta_result||null, jaConsultou:r.ja_consultou||false,
+    obs:r.obs||'', createdAt:r.created_at, updatedAt:r.updated_at,
+    clinic_id:r.clinic_id,
+  };
+}
+function leadToDb(l){
+  return {
+    id:l.id, clinic_id:S.clinic, name:l.name, phone:l.phone||null,
+    att:l.att||null, origin:l.origin||'indicacao', type:l.type||'procedimento',
+    services:l.services||[], potencial_inicial:l.potencialInicial||0,
+    stage:l.stage||'novo', fu_level:l.fuLevel||1, temp:l.temp||'cold',
+    consulta_result:l.consultaResult||null, ja_consultou:l.jaConsultou||false,
+    obs:l.obs||null, created_at:l.createdAt, updated_at:l.updatedAt||new Date().toISOString(),
+  };
+}
+
+// Compatibilidade local fallback (não mais usado mas mantido)
+function normalizeServices(l){
+  if(Array.isArray(l.services)) return l.services;
+  if(l.service) return [l.service];
+  return [];
+}
 
 // ── Theme ──
 function toggleTheme(){
@@ -881,23 +981,25 @@ function autoTemp(origin){
 // ── Stages for context ──
 function getStages(type, role){
   if(type==='mentoria') return STAGES_MENT;
-  return role==='adm' ? STAGES_PROC_ADM : STAGES_PROC_COM;
+  return STAGES_PROC; // Igual para adm e comercial agora
 }
 
 // ════════════════════════════════════
 // LOGIN
 // ════════════════════════════════════
-function doLogin(){
+async function doLogin(){
   const clinic=document.getElementById('lc').value;
   const user=document.getElementById('lu').value.trim().toLowerCase();
   const pass=document.getElementById('lp').value;
   const err=document.getElementById('lerr');
   if(!clinic){err.textContent='Selecione a clínica.';err.style.display='block';return}
-  const users=getUsers(clinic);
-  const found=users.find(u=>u.user===user&&u.pass===pass);
-  if(!found){err.textContent='Usuário ou senha incorretos.';err.style.display='block';return}
   err.style.display='none';
-  S={clinic,user,role:found.role,display:found.display,clinicName:CLINIC_NAMES[clinic]};
+  // Init Supabase para essa clínica
+  initSupabase(clinic);
+  // Buscar usuário no banco
+  const {data,error} = await db.from('users').select('*').eq('clinic_id',clinic).eq('user_login',user).eq('pass',pass).maybeSingle();
+  if(error||!data){err.textContent='Usuário ou senha incorretos.';err.style.display='block';return}
+  S={clinic,user,role:data.role,display:data.display,clinicName:CLINIC_NAMES[clinic],userId:data.id};
   initApp();
 }
 function doLogout(){
@@ -910,67 +1012,11 @@ function doLogout(){
 document.getElementById('lp').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin()});
 
 // ════════════════════════════════════
-// SEED DATA — Suellen Maio 2026
-// ════════════════════════════════════
-const SUELLEN_SEED = [
-  {id:'s01',name:'Julia Ramos',phone:'62981796504',service:'botox',origin:'indicacao',temp:'hot',stage:'followup',fuLevel:2,type:'procedimento',att:'Suellen',obs:'Parando de responder — FU2',createdAt:'2026-05-01T09:00:00.000Z',updatedAt:'2026-05-01T09:00:00.000Z'},
-  {id:'s02',name:'Ana Clara Teodoro',phone:'62991657518',service:'preenchimento',origin:'indicacao',temp:'hot',stage:'followup',fuLevel:2,type:'procedimento',att:'Suellen',obs:'Labial — parando de responder',createdAt:'2026-05-01T09:05:00.000Z',updatedAt:'2026-05-01T09:05:00.000Z'},
-  {id:'s03',name:'Alice Pimenta',phone:'62981422668',service:'full_face',origin:'indicacao',temp:'hot',stage:'fechado',consultaResult:'sim',type:'procedimento',att:'Suellen',obs:'Retorno Full Face — atendida',createdAt:'2026-05-01T09:10:00.000Z',updatedAt:'2026-05-01T09:10:00.000Z'},
-  {id:'s04',name:'Sara Marx',phone:'62981422668',service:'outro',origin:'indicacao',temp:'hot',stage:'fechado',consultaResult:'sim',type:'procedimento',att:'Suellen',obs:'Manutenção — atendida',createdAt:'2026-05-01T09:15:00.000Z',updatedAt:'2026-05-01T09:15:00.000Z'},
-  {id:'s05',name:'(Sem nome)',phone:'62991686169',service:'botox',origin:'indicacao',temp:'hot',stage:'followup',fuLevel:2,type:'procedimento',att:'Suellen',obs:'Botox — parando de responder',createdAt:'2026-05-01T09:20:00.000Z',updatedAt:'2026-05-01T09:20:00.000Z'},
-  {id:'s06',name:'Ana Camila Faleiro',phone:'64993272058',service:'botox',origin:'indicacao',temp:'hot',stage:'orcamento',consultaResult:'sim',type:'procedimento',att:'Suellen',obs:'Botox — aguardando pagamento',createdAt:'2026-05-01T09:25:00.000Z',updatedAt:'2026-05-01T09:25:00.000Z'},
-  {id:'s07',name:'Keila',phone:'62996560758',service:'outro',origin:'indicacao',temp:'hot',stage:'orcamento',type:'procedimento',att:'Suellen',obs:'Avaliação — aguardando pagamento',createdAt:'2026-05-01T09:30:00.000Z',updatedAt:'2026-05-01T09:30:00.000Z'},
-  {id:'s08',name:'Laura (contadora)',phone:'62982036126',service:'outro',origin:'indicacao',temp:'hot',stage:'contato',type:'procedimento',att:'Suellen',obs:'Avaliação — em andamento',createdAt:'2026-05-01T09:35:00.000Z',updatedAt:'2026-05-01T09:35:00.000Z'},
-  {id:'s09',name:'Arlete Ribeiro',phone:'62984714044',service:'outro',origin:'indicacao',temp:'hot',stage:'fechado',consultaResult:'sim',type:'procedimento',att:'Suellen',obs:'Avaliação — atendida',createdAt:'2026-05-01T09:40:00.000Z',updatedAt:'2026-05-01T09:40:00.000Z'},
-  {id:'s10',name:'Jullyane de Moura',phone:'62991779998',service:'botox',origin:'indicacao',temp:'hot',stage:'fechado',consultaResult:'sim',type:'procedimento',att:'Suellen',obs:'Retorno botox — atendida',createdAt:'2026-05-01T09:45:00.000Z',updatedAt:'2026-05-01T09:45:00.000Z'},
-  {id:'s11',name:'Ana Carolina',phone:'62985841121',service:'preenchimento',origin:'fab_story',temp:'warm',stage:'followup',fuLevel:2,type:'procedimento',att:'Suellen',obs:'P. Labial e Botox — parando de responder (Instagram)',createdAt:'2026-05-01T09:50:00.000Z',updatedAt:'2026-05-01T09:50:00.000Z'},
-  {id:'s12',name:'Isabella Fields',phone:'61996034161',service:'',origin:'indicacao',temp:'hot',stage:'followup',fuLevel:2,type:'procedimento',att:'Suellen',obs:'Parando de responder',createdAt:'2026-05-01T09:55:00.000Z',updatedAt:'2026-05-01T09:55:00.000Z'},
-  {id:'s13',name:'Juliana',phone:'62991467373',service:'botox',origin:'indicacao',temp:'hot',stage:'contato',type:'procedimento',att:'Suellen',obs:'Manutenção e botox — em andamento',createdAt:'2026-05-01T10:00:00.000Z',updatedAt:'2026-05-01T10:00:00.000Z'},
-  {id:'s14',name:'Mythali Garcia',phone:'62981336832',service:'outro',origin:'fab_story',temp:'warm',stage:'fechado',consultaResult:'sim',type:'procedimento',att:'Suellen',obs:'Avaliação — atendida (Instagram)',createdAt:'2026-05-01T10:05:00.000Z',updatedAt:'2026-05-01T10:05:00.000Z'},
-  {id:'s15',name:'Alicy Mota',phone:'62994044124',service:'preenchimento',origin:'fab_story',temp:'warm',stage:'followup',fuLevel:2,type:'procedimento',att:'Suellen',obs:'P. Labial e Rinomodelação — parando de responder (Instagram)',createdAt:'2026-05-01T10:10:00.000Z',updatedAt:'2026-05-01T10:10:00.000Z'},
-  {id:'s16',name:'Ana Carolina Paixão',phone:'62982137016',service:'full_face',origin:'indicacao',temp:'hot',stage:'fechado',consultaResult:'sim',type:'procedimento',att:'Suellen',obs:'Retorno Lifting — atendida',createdAt:'2026-05-01T10:15:00.000Z',updatedAt:'2026-05-01T10:15:00.000Z'},
-  {id:'s17',name:'Raquel Troncoso',phone:'62992548673',service:'outro',origin:'indicacao',temp:'hot',stage:'fechado',consultaResult:'sim',type:'procedimento',att:'Suellen',obs:'Manutenção — atendida',createdAt:'2026-05-01T10:20:00.000Z',updatedAt:'2026-05-01T10:20:00.000Z'},
-  {id:'s18',name:'Juliana Vale',phone:'62981003100',service:'botox',origin:'indicacao',temp:'hot',stage:'fechado',consultaResult:'sim',type:'procedimento',att:'Suellen',obs:'Retorno botox — atendida',createdAt:'2026-05-01T10:25:00.000Z',updatedAt:'2026-05-01T10:25:00.000Z'},
-  {id:'s19',name:'Eloiza Sanches',phone:'44997217008',service:'botox',origin:'indicacao',temp:'hot',stage:'fechado',consultaResult:'sim',type:'procedimento',att:'Suellen',obs:'Retorno botox — atendida',createdAt:'2026-05-01T10:30:00.000Z',updatedAt:'2026-05-01T10:30:00.000Z'},
-  {id:'s20',name:'Carol Nogueira',phone:'62984226240',service:'outro',origin:'indicacao',temp:'hot',stage:'fechado',consultaResult:'sim',type:'procedimento',att:'Suellen',obs:'Confirmação de horário — atendida',createdAt:'2026-05-01T10:35:00.000Z',updatedAt:'2026-05-01T10:35:00.000Z'},
-  {id:'s21',name:'Gabriela',phone:'62994924285',service:'full_face',origin:'fab_story',temp:'warm',stage:'followup',fuLevel:2,type:'procedimento',att:'Suellen',obs:'FullFace — parando de responder (Instagram)',createdAt:'2026-05-01T10:40:00.000Z',updatedAt:'2026-05-01T10:40:00.000Z'},
-  {id:'s22',name:'Ruana de Melo',phone:'62992680899',service:'outro',origin:'indicacao',temp:'hot',stage:'fechado',consultaResult:'sim',type:'procedimento',att:'Suellen',obs:'Confirmação de horário — atendida',createdAt:'2026-05-01T10:45:00.000Z',updatedAt:'2026-05-01T10:45:00.000Z'},
-  {id:'s23',name:'Mariza Ribeiro',phone:'62981614945',service:'full_face',origin:'indicacao',temp:'hot',stage:'fechado',consultaResult:'sim',type:'procedimento',att:'Suellen',obs:'Lifting — confirmação de horário, atendida',createdAt:'2026-05-01T10:50:00.000Z',updatedAt:'2026-05-01T10:50:00.000Z'},
-  {id:'s24',name:'Hevelyn Gomes',phone:'62994386249',service:'',origin:'indicacao',temp:'hot',stage:'novo',type:'procedimento',att:'Suellen',obs:'Sem status registrado',createdAt:'2026-05-01T10:55:00.000Z',updatedAt:'2026-05-01T10:55:00.000Z'},
-  {id:'s25',name:'Karine Gonçalves',phone:'62992408745',service:'full_face',origin:'indicacao',temp:'hot',stage:'fechado',consultaResult:'sim',type:'procedimento',att:'Suellen',obs:'Retorno Full Face — atendida',createdAt:'2026-05-01T11:00:00.000Z',updatedAt:'2026-05-01T11:00:00.000Z'},
-  {id:'s26',name:'Dani Troncoso',phone:'62981431100',service:'outro',origin:'indicacao',temp:'hot',stage:'fechado',consultaResult:'sim',type:'procedimento',att:'Suellen',obs:'Manutenção — atendida',createdAt:'2026-05-01T11:05:00.000Z',updatedAt:'2026-05-01T11:05:00.000Z'},
-  {id:'s27',name:'Silvia',phone:'62993007121',service:'preenchimento',origin:'fab_direct',temp:'warm',stage:'fechado',consultaResult:'sim',type:'procedimento',att:'Suellen',obs:'Realce lips — atendida (Tráfego)',createdAt:'2026-05-01T11:10:00.000Z',updatedAt:'2026-05-01T11:10:00.000Z'},
-  {id:'s28',name:'Milena Guerra',phone:'62981691243',service:'outro',origin:'indicacao',temp:'hot',stage:'fechado',consultaResult:'sim',type:'procedimento',att:'Suellen',obs:'Remoção de preenchedor labial — atendida',createdAt:'2026-05-01T11:15:00.000Z',updatedAt:'2026-05-01T11:15:00.000Z'},
-  {id:'s29',name:'Iôlany Haberkamp',phone:'51982139436',service:'botox',origin:'indicacao',temp:'hot',stage:'fechado',consultaResult:'sim',type:'procedimento',att:'Suellen',obs:'Retorno Botox — atendida',createdAt:'2026-05-01T11:20:00.000Z',updatedAt:'2026-05-01T11:20:00.000Z'},
-];
-
-function seedSuellenData(){
-  const key = 'lf2_leads_suellen';
-  const existing = localStorage.getItem(key);
-  if(!existing || JSON.parse(existing).length === 0){
-    localStorage.setItem(key, JSON.stringify(SUELLEN_SEED));
-  }
-}
-
-function resetDemoData(){
-  if(!confirm('Isso vai substituir os leads atuais pelos dados de Maio/2026 da planilha. Continuar?')) return;
-  localStorage.setItem('lf2_leads_suellen', JSON.stringify(SUELLEN_SEED));
-  renderKanban();
-  showToast('✓ Dados de Maio/2026 reimportados!');
-}
-
-// ════════════════════════════════════
 // INIT
 // ════════════════════════════════════
 function initApp(){
-  // Seed dados reais da Suellen (só se ainda não há leads)
-  if(S.clinic === 'suellen') seedSuellenData();
-
   document.getElementById('page-login').classList.remove('active');
   document.getElementById('page-app').classList.add('active');
-  // Mostrar botão reimportar só para ADM da Suellen
-  const btnReset = document.getElementById('btn-reset-demo');
-  if(btnReset) btnReset.style.display = (S.clinic==='suellen'&&S.role==='adm') ? 'flex' : 'none';
   document.getElementById('sb-cname').textContent=S.clinicName;
   document.getElementById('sb-uname').textContent=S.display+' · '+S.role.toUpperCase();
   document.getElementById('kanban-sub').textContent=S.role==='adm'?'todos os leads':'seus leads';
@@ -978,13 +1024,15 @@ function initApp(){
     document.getElementById('nav-dash').style.display='flex';
     document.getElementById('nav-team').style.display='flex';
     document.getElementById('nav-valores').style.display='flex';
+  } else {
+    // Comercial também tem dashboard
+    document.getElementById('nav-dash').style.display='flex';
   }
-  // mentoria enabled for both clinics
   document.getElementById('opt-mentoria').style.display='';
-  // theme label
   const t=document.body.getAttribute('data-theme');
   document.getElementById('theme-lbl').textContent=t==='dark'?'Modo claro':'Modo escuro';
-  renderKanban();
+  // Carregar valores em cache e então renderizar kanban
+  loadValoresCache().then(()=>renderKanban());
 }
 
 // ════════════════════════════════════
@@ -1012,21 +1060,21 @@ function closeSidebar(){
 // ════════════════════════════════════
 // KANBAN
 // ════════════════════════════════════
-function renderKanban(){
+async function renderKanban(){
   const board=document.getElementById('kanban-board');
-  let leads=getLeads();
+  board.innerHTML='<div style="color:var(--text3);font-size:13px;padding:20px">Carregando...</div>';
+  let leads=await getLeads();
 
   // Role filter
   if(S.role==='comercial'){
     leads=leads.filter(l=>l.att===S.display);
-    leads=leads.filter(l=>!['orcamento','fechado','demitido','recusado'].includes(l.stage)||l.type==='mentoria');
   }
 
   // Type filter
   if(kanbanFilter!=='todos') leads=leads.filter(l=>(l.type||'procedimento')===kanbanFilter);
 
-  // Follow up alert (all followup leads, before type filter for badge accuracy)
-  const allLeads=getLeads();
+  // Follow up alert
+  const allLeads=await getLeads();
   const fuLeadsAll=(S.role==='comercial'?allLeads.filter(l=>l.att===S.display):allLeads).filter(l=>l.stage==='followup');
   const fuAlert=document.getElementById('follow-alert');
   const fuBadge=document.getElementById('follow-badge');
@@ -1041,17 +1089,11 @@ function renderKanban(){
     fuBadge.style.display='none';
   }
 
-  // Determine columns based on filter
+  // Colunas do kanban
   let stagesSet;
-  if(kanbanFilter==='mentoria'){
-    stagesSet=STAGES_MENT;
-  } else if(kanbanFilter==='procedimento'){
-    stagesSet=S.role==='adm'?STAGES_PROC_ADM:STAGES_PROC_COM;
-  } else {
-    // todos: use procedimento base columns (cleaner), mentoria cards show there too
-    if(S.role==='adm') stagesSet=STAGES_PROC_ADM;
-    else stagesSet=STAGES_PROC_COM;
-  }
+  if(kanbanFilter==='mentoria') stagesSet=STAGES_MENT;
+  else if(kanbanFilter==='procedimento') stagesSet=STAGES_PROC;
+  else stagesSet=STAGES_TODOS;
 
   board.innerHTML=stagesSet.map(stage=>{
     const col=leads.filter(l=>l.stage===stage.id);
@@ -1101,10 +1143,17 @@ function renderCard(l){
   }
 
   let tags='';
-  if(l.consultaResult==='sim') tags+=`<span class="tag tag-consulta-sim">✓ Consulta ok</span>`;
-  if(l.consultaResult==='nao') tags+=`<span class="tag tag-consulta-nao">✗ Não compareceu</span>`;
-  if(l.jaConsultou) tags+=`<span class="tag tag-ja-consultou">↩ Já consultou</span>`;
-  if(l.type==='mentoria'&&kanbanFilter==='todos') tags+=`<span class="tag tag-mentoria">Mentoria</span>`;
+  if(l.consultaResult==='sim') tags+=`<span class="tag tag-consulta-sim">✓ ok</span>`;
+  if(l.consultaResult==='nao') tags+=`<span class="tag tag-consulta-nao">✗ não compareceu</span>`;
+  if(l.jaConsultou) tags+=`<span class="tag tag-ja-consultou">↩ já consultou</span>`;
+  // No "todos" e "confirmado": mostrar tipo com ícone
+  if(kanbanFilter==='todos'&&l.stage==='confirmado'){
+    tags+=l.type==='mentoria'
+      ?`<span class="tag tag-mentoria">🎓 Mentoria</span>`
+      :`<span class="tag tag-consulta-sim">🏥 Procedimento</span>`;
+  } else if(l.type==='mentoria'&&kanbanFilter==='todos'){
+    tags+=`<span class="tag tag-mentoria">Mentoria</span>`;
+  }
 
   // Follow up steps display
   let fuHtml='';
@@ -1134,7 +1183,7 @@ function renderCard(l){
     ${tags?`<div class="lc-tags">${tags}</div>`:''}
     ${svcLabel?`<div style="font-size:10px;color:var(--text3);margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${svcLabel}</div>`:''}
     <div class="lc-foot">
-      <span class="lc-time">${fmtDate(l.createdAt)}</span>
+      <span class="lc-time">${fmtDate(l.createdAt||l.created_at)}</span>
       <span class="lc-att">${l.att||''}</span>
     </div>
   </div>`;
@@ -1290,32 +1339,31 @@ function clearLeadForm(){
   document.getElementById('f-origin').value='link_bio';
   document.getElementById('f-type').value='procedimento';
 }
-function saveLead(){
+async function saveLead(){
   const name=document.getElementById('f-name').value.trim();
   if(!name){showToast('⚠ Nome é obrigatório');return}
   const origin=document.getElementById('f-origin').value;
   const type=document.getElementById('f-type').value;
-  const leads=getLeads();
   const stage=getSelStage(type);
   const services=type==='procedimento'?getSelectedServicesProc():getSelectedServicesMent();
   const potencialInicial=type==='procedimento'?calcPotencialInicial(services):0;
+  const n=now();
 
-  if(editId){
-    const idx=leads.findIndex(x=>x.id===editId);
-    if(idx!==-1){
-      leads[idx]={...leads[idx],name,phone:v('f-phone'),att:v('f-att'),origin,type,
-        services,potencialInicial,
-        obs:v('f-obs'),stage,temp:autoTemp(origin),updatedAt:now()};
-    }
-  } else {
-    leads.push({id:'l_'+Date.now(),name,phone:v('f-phone'),att:v('f-att'),origin,type,
-      services,potencialInicial,obs:v('f-obs'),
-      stage,temp:autoTemp(origin),consultaResult:null,jaConsultou:false,
-      createdAt:now(),updatedAt:now()});
-  }
-  setLeads(leads);
+  const lead = {
+    id: editId || 'l_'+Date.now(),
+    name, phone:v('f-phone'), att:v('f-att'), origin, type,
+    services, potencialInicial, obs:v('f-obs'), stage,
+    temp:autoTemp(origin),
+    consultaResult: editId ? null : null,
+    jaConsultou: false,
+    createdAt: editId ? undefined : n,
+    updatedAt: n,
+  };
+  if(!editId) lead.createdAt = n;
+
+  await upsertLead(lead);
   closeOv('ov-lead');
-  renderKanban();
+  await renderKanban();
   showToast(editId?'Lead atualizado':'Lead adicionado');
   editId=null;
 }
@@ -1323,8 +1371,8 @@ function saveLead(){
 // ════════════════════════════════════
 // DETAIL MODAL
 // ════════════════════════════════════
-function openDetail(id){
-  const leads=getLeads();
+async function openDetail(id){
+  const leads=await getLeads();
   const l=leads.find(x=>x.id===id);
   if(!l) return;
   const ori=ORIGINS[l.origin]||{icon:'?',label:l.origin};
@@ -1383,7 +1431,7 @@ function openDetail(id){
   const nextStage=getNextStage(l);
   const canAdvance=nextStage&&!(S.role==='comercial'&&['orcamento','demitido','recusado'].includes(nextStage.id));
   document.getElementById('detail-foot').innerHTML=`
-    <button class="btn btn-danger btn-sm" onclick="deleteLead('${id}')">Excluir</button>
+    <button class="btn btn-danger btn-sm" onclick="deleteLead_confirm('${id}')">Excluir</button>
     <button class="btn btn-ghost btn-sm" onclick="closeOv('ov-detail')">Fechar</button>
     <button class="btn btn-ghost btn-sm" onclick="editLead('${id}')">Editar</button>
     ${canAdvance?`<button class="btn btn-primary btn-sm" onclick="advanceStage('${id}')">Avançar → ${nextStage.label}</button>`:''}
@@ -1391,37 +1439,34 @@ function openDetail(id){
   openOv('ov-detail');
 }
 
-function setConsulta(id, result){
-  const leads=getLeads();
-  const idx=leads.findIndex(x=>x.id===id);
-  if(idx===-1) return;
-  leads[idx].consultaResult=result;
+async function setConsulta(id, result){
+  const leads=await getLeads();
+  const l=leads.find(x=>x.id===id);
+  if(!l) return;
+  l.consultaResult=result;
   if(result==='sim'){
-    if(S.role==='adm') leads[idx].stage='orcamento';
-    // comercial keeps at consulta but tagged
+    l.stage='confirmado';
   } else {
-    leads[idx].stage='followup';
-    leads[idx].fuLevel=leads[idx].jaConsultou?1:(leads[idx].fuLevel||1); // reset or keep
-    leads[idx].jaConsultou=true;
+    l.stage='followup';
+    l.jaConsultou=true;
   }
-  leads[idx].updatedAt=now();
-  setLeads(leads);
+  l.updatedAt=now();
+  await upsertLead(l);
   closeOv('ov-detail');
-  renderKanban();
-  showToast(result==='sim'?'✓ Consulta confirmada!':'Lead voltou para Follow Up');
+  await renderKanban();
+  showToast(result==='sim'?'✓ Confirmado!':'Lead voltou para Follow Up');
 }
 
-function advanceFU(event, id, level){
+async function advanceFU(event, id, level){
   event.stopPropagation();
-  const leads=getLeads();
-  const idx=leads.findIndex(x=>x.id===id);
-  if(idx===-1) return;
-  const cur=leads[idx].fuLevel||1;
-  // toggle: clicking current level resets to previous, clicking next advances
-  leads[idx].fuLevel = level > cur ? level : Math.max(1, level-1);
-  leads[idx].updatedAt=now();
-  setLeads(leads);
-  renderKanban();
+  const leads=await getLeads();
+  const l=leads.find(x=>x.id===id);
+  if(!l) return;
+  const cur=l.fuLevel||1;
+  l.fuLevel = level > cur ? level : Math.max(1, level-1);
+  l.updatedAt=now();
+  await upsertLead(l);
+  await renderKanban();
 }
 
 function getNextStage(l){
@@ -1431,40 +1476,34 @@ function getNextStage(l){
   return stages[idx+1];
 }
 
-function advanceStage(id){
-  const leads=getLeads();
+async function advanceStage(id){
+  const leads=await getLeads();
   const l=leads.find(x=>x.id===id);
   if(!l) return;
   const next=getNextStage(l);
   if(!next){showToast('Lead já está na etapa final');return}
-  if(S.role==='comercial'&&['orcamento','demitido','recusado'].includes(next.id)){showToast('⚠ Sem permissão para esta etapa');return}
-  const idx=leads.findIndex(x=>x.id===id);
-  leads[idx].stage=next.id;
-  leads[idx].updatedAt=now();
-  setLeads(leads);
+  l.stage=next.id;
+  l.updatedAt=now();
+  await upsertLead(l);
   closeOv('ov-detail');
-  renderKanban();
+  await renderKanban();
   showToast(`Avançou para: ${next.label}`);
 }
 
-function moveStage(id, stageId){
-  const leads=getLeads();
-  const idx=leads.findIndex(x=>x.id===id);
-  if(idx===-1) return;
-  // comercial can't move to adm stages
-  if(S.role==='comercial' && ['orcamento','demitido','recusado'].includes(stageId)){
-    showToast('⚠ Sem permissão para esta etapa');return;
-  }
-  leads[idx].stage=stageId;
-  leads[idx].updatedAt=now();
-  setLeads(leads);
+async function moveStage(id, stageId){
+  const leads=await getLeads();
+  const l=leads.find(x=>x.id===id);
+  if(!l) return;
+  l.stage=stageId;
+  l.updatedAt=now();
+  await upsertLead(l);
   closeOv('ov-detail');
-  renderKanban();
+  await renderKanban();
   showToast('Etapa atualizada');
 }
 
-function editLead(id){
-  const leads=getLeads();
+async function editLead(id){
+  const leads=await getLeads();
   const l=leads.find(x=>x.id===id);
   if(!l) return;
   editId=id;
@@ -1479,30 +1518,32 @@ function editLead(id){
   const stages=getStages(l.type||'procedimento',S.role);
   buildStageGrid(stages, l.stage||stages[0].id);
   buildChips();
-  // restaurar seleção de serviços
   const services=normalizeServices(l);
   setChipsFromServices(services, l.type||'procedimento');
   closeOv('ov-detail');
   openOv('ov-lead');
 }
 
-function deleteLead(id){
+async function deleteLead_confirm(id){
   if(!confirm('Excluir este lead?')) return;
-  setLeads(getLeads().filter(x=>x.id!==id));
+  await deleteLead_db(id);
   closeOv('ov-detail');
-  renderKanban();
+  await renderKanban();
   showToast('Lead excluído');
 }
 
 // ════════════════════════════════════
 // DASHBOARD
 // ════════════════════════════════════
-function renderDashboard(){
-  const tickets=getTickets();
+async function renderDashboard(){
+  document.getElementById('dash-body').innerHTML='<div style="color:var(--text3);font-size:13px;padding:20px">Carregando...</div>';
+  const valDb=await getValoresDb();
+  const tickets={proc:valDb.ticket_proc||0,ment:valDb.ticket_ment||0};
   const hoje=new Date().toDateString();
 
-  // Apply type + period filters
-  let leads=getLeads();
+  let leads=await getLeads();
+  // Comercial vê só seus leads no dashboard
+  if(S.role==='comercial') leads=leads.filter(l=>l.att===S.display);
   if(dashFilter!=='todos') leads=leads.filter(l=>(l.type||'procedimento')===dashFilter);
   leads=filterByPeriod(leads);
 
@@ -1652,30 +1693,51 @@ function renderDashboard(){
           }).join('')}
         </div>
       </div>
-      <div class="dash-card">
+      ${S.role==='adm'?`<div class="dash-card">
         <div class="dash-card-title">Ranking Atendentes</div>
         ${attList.map(([name,cnt],i)=>{
           const f=attFch[name]||0;
           const p=Math.round(cnt/maxAtt*100);
           const m=['🥇','🥈','🥉','4°','5°'];
-          return `<div class="rank-item"><span class="rank-pos">${m[i]}</span><span class="rank-name">${name}</span><div style="flex:1;background:var(--border);border-radius:2px;height:3px;margin:0 8px"><div style="width:${p}%;height:100%;background:var(--accent);border-radius:2px"></div></div><span class="rank-stat">${cnt} / ${f} fech.</span></div>`;
+          return `<div class="rank-item"><span class="rank-pos">${m[i]}</span><span class="rank-name">${name}</span><div style="flex:1;background:var(--border);border-radius:2px;height:3px;margin:0 8px"><div style="width:${p}%;height:100%;background:var(--accent);border-radius:2px"></div></div><span class="rank-stat">${cnt} / ${f} conf.</span></div>`;
         }).join('')||'<div style="color:var(--text3);font-size:12px;padding:16px 0;text-align:center">Sem dados</div>'}
-      </div>
+      </div>`:`<div class="dash-card">
+        <div class="dash-card-title">Meu Desempenho</div>
+        <div class="rank-item" style="background:var(--accent-light);border:1px solid var(--accent)">
+          <span class="rank-pos">👤</span>
+          <span class="rank-name">${S.display}</span>
+          <span class="rank-stat">${total} leads · ${leads.filter(l=>l.stage==='confirmado').length} confirmados</span>
+        </div>
+        <div style="margin-top:10px;font-size:11px;color:var(--text3)">
+          <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)">
+            <span>Novos este mês</span>
+            <strong>${filterByPeriod(leads).length}</strong>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)">
+            <span>Em Follow Up</span>
+            <strong style="color:var(--amber)">${leads.filter(l=>l.stage==='followup').length}</strong>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:6px 0">
+            <span>Taxa de conversão</span>
+            <strong style="color:var(--green)">${conv}%</strong>
+          </div>
+        </div>
+      </div>`}
     </div>
   `;
 }
 
-function openTicketModal(){
-  const t=getTickets();
-  document.getElementById('tk-proc').value=t.proc||'';
-  document.getElementById('tk-ment').value=t.ment||'';
+async function openTicketModal(){
+  const vb=await getValoresDb();
+  document.getElementById('tk-proc').value=vb.ticket_proc||'';
+  document.getElementById('tk-ment').value=vb.ticket_ment||'';
   openOv('ov-ticket');
 }
-function saveTickets2(){
-  saveTickets({
-    proc:parseFloat(document.getElementById('tk-proc').value)||0,
-    ment:parseFloat(document.getElementById('tk-ment').value)||0,
-  });
+async function saveTickets2(){
+  const vb=await getValoresDb();
+  vb.ticket_proc=parseFloat(document.getElementById('tk-proc').value)||0;
+  vb.ticket_ment=parseFloat(document.getElementById('tk-ment').value)||0;
+  await saveValoresDb(vb);
   closeOv('ov-ticket');
   renderDashboard();
   showToast('Ticket médio salvo');
@@ -1696,13 +1758,22 @@ function buildDonut(data){
 // ════════════════════════════════════
 // VALORES BASE (ADM)
 // ════════════════════════════════════
-function renderValoresBase(){
-  const vals=getValores();
+async function renderValoresBase(){
+  document.getElementById('valores-body').innerHTML='<div style="color:var(--text3);font-size:13px;padding:20px">Carregando...</div>';
+  const vb=await getValoresDb();
+  const procData=PROC_DEFAULTS.map(p=>({...p,valor:vb.proc?.[p.id]||0}));
+  const mentData=MENT_DEFAULTS.map(m=>({
+    ...m,
+    valor:typeof vb.ment?.[m.id]==='object'?vb.ment[m.id].valor:(vb.ment?.[m.id]||0),
+    label:typeof vb.ment?.[m.id]==='object'?vb.ment[m.id].label:m.label,
+  }));
+  window._valoresProc=procData;
+  window._valuesMent=mentData;
   document.getElementById('valores-body').innerHTML=`
     <div class="dash-card" style="margin-bottom:14px">
       <div class="dash-card-title">Procedimentos Estéticos</div>
       <p style="font-size:11px;color:var(--text3);margin-bottom:14px;line-height:1.5">Esses valores são usados para calcular o <strong>Potencial Inicial</strong> no cadastro de cada lead e no Dashboard.</p>
-      ${vals.proc.map(p=>`
+      ${procData.map(p=>`
         <div class="vb-item">
           <span class="vb-name">${p.label}</span>
           <input class="vb-input" type="number" id="vb-proc-${p.id}" value="${p.valor||''}" placeholder="R$ 0">
@@ -1710,56 +1781,36 @@ function renderValoresBase(){
     </div>
     <div class="dash-card">
       <div class="dash-card-title">Mentorias</div>
-      <p style="font-size:11px;color:var(--text3);margin-bottom:14px;line-height:1.5">Pacotes de mentoria disponíveis. Você pode renomear as labels diretamente na tela quando quiser.</p>
-      ${vals.ment.map(m=>`
+      <p style="font-size:11px;color:var(--text3);margin-bottom:14px;line-height:1.5">Pacotes de mentoria. Renomeie os labels como quiser.</p>
+      ${mentData.map(m=>`
         <div class="vb-item">
-          <input style="flex:1;background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius-xs);padding:6px 10px;font-size:12px;color:var(--text);outline:none;font-family:var(--font-body)" 
+          <input style="flex:1;background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius-xs);padding:6px 10px;font-size:12px;color:var(--text);outline:none;font-family:var(--font-body)"
             id="vb-ment-label-${m.id}" value="${m.label}" placeholder="Nome do pacote">
           <input class="vb-input" type="number" id="vb-ment-${m.id}" value="${m.valor||''}" placeholder="R$ 0">
         </div>`).join('')}
-    </div>
-  `;
+    </div>`;
 }
 
-function saveValoresBase(){
-  const vals=getValores();
-  const proc=vals.proc.map(p=>({
-    ...p,
-    valor:parseFloat(document.getElementById(`vb-proc-${p.id}`)?.value)||0
-  }));
-  const ment=vals.ment.map(m=>{
-    const newLabel=document.getElementById(`vb-ment-label-${m.id}`)?.value||m.label;
-    const newValor=parseFloat(document.getElementById(`vb-ment-${m.id}`)?.value)||0;
-    // Atualizar label no MENT_DEFAULTS (session only — persiste no localStorage)
-    return {...m, label:newLabel, valor:newValor};
+async function saveValoresBase(){
+  const vb=await getValoresDb();
+  const proc={};
+  (window._valoresProc||PROC_DEFAULTS).forEach(p=>{
+    proc[p.id]=parseFloat(document.getElementById(`vb-proc-${p.id}`)?.value)||0;
   });
-  // Salvar labels das mentorias
-  const d={proc:{},ment:{}};
-  proc.forEach(p=>d.proc[p.id]=p.valor);
-  ment.forEach(m=>{d.ment[m.id]={valor:m.valor,label:m.label};});
-  localStorage.setItem(kValores(S.clinic),JSON.stringify(d));
-  // Atualizar MENT_DEFAULTS em memória para esta sessão
-  ment.forEach(m=>{const idx=MENT_DEFAULTS.findIndex(x=>x.id===m.id);if(idx!==-1)MENT_DEFAULTS[idx].label=m.label;});
+  const ment={};
+  (window._valuesMent||MENT_DEFAULTS).forEach(m=>{
+    ment[m.id]={
+      valor:parseFloat(document.getElementById(`vb-ment-${m.id}`)?.value)||0,
+      label:document.getElementById(`vb-ment-label-${m.id}`)?.value||m.label,
+    };
+  });
+  await saveValoresDb({...vb,proc,ment,updated_at:new Date().toISOString()});
   showToast('✓ Valores salvos!');
   renderValoresBase();
 }
-
-// Ajustar getValores para ler labels customizados das mentorias
-function getValores(){
-  try{
-    const d=JSON.parse(localStorage.getItem(kValores(S.clinic))||'{}');
-    return {
-      proc: PROC_DEFAULTS.map(p=>({...p,valor:d.proc?.[p.id]||0})),
-      ment: MENT_DEFAULTS.map(m=>({
-        ...m,
-        valor:typeof d.ment?.[m.id]==='object'?d.ment[m.id].valor:(d.ment?.[m.id]||0),
-        label:typeof d.ment?.[m.id]==='object'?d.ment[m.id].label:m.label,
-      })),
-    };
-  }catch{return {proc:PROC_DEFAULTS.map(p=>({...p})),ment:MENT_DEFAULTS.map(m=>({...m}))};}
-}
-function renderTeam(){
-  const users=getUsers(S.clinic);
+async function renderTeam(){
+  const users=await getUsers_db(S.clinic);
+  window._teamUsers=users;
   document.getElementById('team-body').innerHTML=`
     <div class="team-list">
       ${users.map((u,i)=>`
@@ -1792,9 +1843,9 @@ function openNewUser(){
   openOv('ov-user');
 }
 function editUser(idx){
-  const users=getUsers(S.clinic);
-  const u=users[idx];
-  editUserId=idx;
+  const u=window._teamUsers?.[idx];
+  if(!u) return;
+  editUserId=u.id;
   document.getElementById('mu-title').textContent='Editar Usuário';
   document.getElementById('u-display').value=u.display||'';
   document.getElementById('u-user').value=u.user||'';
@@ -1802,38 +1853,46 @@ function editUser(idx){
   document.getElementById('u-role').value=u.role||'comercial';
   openOv('ov-user');
 }
-function saveUser(){
+async function saveUser(){
   const display=document.getElementById('u-display').value.trim();
   const user=document.getElementById('u-user').value.trim().toLowerCase();
   const pass=document.getElementById('u-pass').value;
   const role=document.getElementById('u-role').value;
   if(!display||!user||!pass){showToast('⚠ Preencha todos os campos');return}
-  const users=getUsers(S.clinic);
-  if(editUserId!==null){
-    users[editUserId]={...users[editUserId],display,user,pass,role};
-  } else {
-    if(users.find(u=>u.user===user)){showToast('⚠ Usuário já existe');return}
-    users.push({display,user,pass,role});
-  }
-  setUsers(S.clinic,users);
+  await upsertUser({id:editUserId||undefined,user,pass,display,role},S.clinic);
   closeOv('ov-user');
-  renderTeam();
-  showToast(editUserId!==null?'Usuário atualizado':'Usuário criado');
+  await renderTeam();
+  showToast(editUserId?'Usuário atualizado':'Usuário criado');
   editUserId=null;
 }
-function deleteUser(idx){
-  const users=getUsers(S.clinic);
-  if(users[idx]?.user===S.user){showToast('⚠ Você não pode excluir seu próprio usuário');return}
-  if(!confirm(`Excluir usuário "${users[idx]?.display}"?`)) return;
-  users.splice(idx,1);
-  setUsers(S.clinic,users);
-  renderTeam();
+async function deleteUser(idx){
+  const u=window._teamUsers?.[idx];
+  if(!u) return;
+  if(u.user===S.user){showToast('⚠ Você não pode excluir seu próprio usuário');return}
+  if(!confirm(`Excluir usuário "${u.display}"?`)) return;
+  await deleteUser_db(u.id);
+  await renderTeam();
   showToast('Usuário excluído');
 }
 
-// ════════════════════════════════════
-// HELPERS
-// ════════════════════════════════════
+// ── Trocar senha própria ──
+function openTrocarSenha(){
+  ['senha-atual','senha-nova','senha-conf'].forEach(id=>document.getElementById(id).value='');
+  openOv('ov-senha');
+}
+async function salvarSenha(){
+  const atual=document.getElementById('senha-atual').value;
+  const nova=document.getElementById('senha-nova').value;
+  const conf=document.getElementById('senha-conf').value;
+  if(!atual||!nova){showToast('⚠ Preencha todos os campos');return}
+  if(nova!==conf){showToast('⚠ Senhas não coincidem');return}
+  // Verificar senha atual
+  const {data,error}=await db.from('users').select('id').eq('clinic_id',S.clinic).eq('user_login',S.user).eq('pass',atual).maybeSingle();
+  if(error||!data){showToast('⚠ Senha atual incorreta');return}
+  await db.from('users').update({pass:nova}).eq('id',data.id);
+  closeOv('ov-senha');
+  showToast('✓ Senha alterada com sucesso!');
+}
 function v(id){return document.getElementById(id)?.value||''}
 function now(){return new Date().toISOString()}
 function openOv(id){document.getElementById(id).classList.add('open')}
