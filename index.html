@@ -241,6 +241,12 @@ input,select,textarea,button{font-family:var(--font-body)}
 .tag-ja-consultou{background:var(--purple-bg);color:var(--purple)}
 .tag-mentoria{background:var(--blue-bg);color:var(--blue)}
 .tag-demitido{background:var(--red-bg);color:var(--red)}
+.tag-perdido{background:var(--red-bg);color:var(--red);opacity:.8}
+.tag-fechado{background:var(--green-bg);color:var(--green)}
+.motivo-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.motivo-btn{padding:10px 8px;border-radius:var(--radius-sm);border:1px solid var(--border2);cursor:pointer;text-align:center;font-size:12px;font-weight:600;transition:all var(--transition);background:var(--surface2);color:var(--text2);font-family:var(--font-body)}
+.motivo-btn:hover{border-color:var(--red);color:var(--red);background:var(--red-bg)}
+.motivo-btn.sel{border-color:var(--red);color:var(--red);background:var(--red-bg)}
 .lc-foot{display:flex;align-items:center;justify-content:space-between;margin-top:6px}
 .lc-time{font-size:10px;color:var(--text3)}
 .lc-att{font-size:10px;color:var(--text3);font-style:italic;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:80px}
@@ -712,6 +718,31 @@ input,select,textarea,button{font-family:var(--font-body)}
   </div>
 </div>
 </div>
+<!-- ══ MODAL PERDIDO ══ -->
+<div class="overlay" id="ov-perdido">
+<div class="modal">
+  <div class="modal-head">
+    <span class="modal-title">Motivo da Perda</span>
+    <button class="modal-close" onclick="closeOv('ov-perdido')">✕</button>
+  </div>
+  <div class="modal-body">
+    <p style="font-size:12px;color:var(--text3);margin-bottom:4px;line-height:1.5">Por que este lead foi perdido?</p>
+    <div class="motivo-grid" id="motivo-grid">
+      <button class="motivo-btn" onclick="selMotivo(this,'sem_resposta')">📵 Parou de responder</button>
+      <button class="motivo-btn" onclick="selMotivo(this,'outro_prof')">👩‍⚕️ Outro profissional</button>
+      <button class="motivo-btn" onclick="selMotivo(this,'preco')">💰 Preço fora do orçamento</button>
+      <button class="motivo-btn" onclick="selMotivo(this,'outro')">📝 Outro motivo</button>
+    </div>
+    <div id="motivo-outro-wrap" style="display:none;margin-top:10px">
+      <div class="ff" style="margin-bottom:0"><label>Descreva o motivo</label><textarea id="motivo-outro-txt" placeholder="Digite o motivo..." style="min-height:56px"></textarea></div>
+    </div>
+  </div>
+  <div class="modal-foot">
+    <button class="btn btn-ghost" onclick="closeOv('ov-perdido')">Cancelar</button>
+    <button class="btn btn-primary" onclick="confirmarPerdido()">Confirmar</button>
+  </div>
+</div>
+</div>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -742,34 +773,41 @@ function initSupabase(clinic) {
 const CLINIC_NAMES = {heloisa:'Clínica Heloisa Santos',suellen:'Clínica Dra. Suellen Garcia'};
 
 // ── Stages — ADM e Comercial agora iguais, sem orcamento/fechado ──
-// "Confirmado" = consulta aceita (proc) ou proposta aceita (ment)
+// Stages
 const STAGES_PROC = [
-  {id:'novo',       label:'Novo Lead',         color:'#6BA3D6'},
-  {id:'contato',    label:'Em Contato',        color:'#F0A830'},
-  {id:'followup',   label:'Follow Up',         color:'#A87ED4'},
-  {id:'consulta',   label:'Consulta Agendada', color:'#4CAF7D'},
-  {id:'confirmado', label:'Confirmado',        color:'#2D7A4F'},
-  {id:'demitido',   label:'Demitido',          color:'#B03A2E'},
+  {id:'novo',      label:'Novo Lead',         color:'#6BA3D6'},
+  {id:'contato',   label:'Em Contato',        color:'#F0A830'},
+  {id:'followup',  label:'Follow Up',         color:'#A87ED4'},
+  {id:'consulta',  label:'Consulta Agendada', color:'#4CAF7D'},
+  {id:'perdido',   label:'Perdido',           color:'#E06060'},
+  {id:'demitido',  label:'Demitido',          color:'#B03A2E'},
 ];
 const STAGES_PROC_COM = STAGES_PROC;
 const STAGES_PROC_ADM = STAGES_PROC;
 const STAGES_MENT = [
-  {id:'novo',       label:'Novo Lead',         color:'#6BA3D6'},
-  {id:'contato',    label:'Em Contato',        color:'#F0A830'},
-  {id:'followup',   label:'Follow Up',         color:'#A87ED4'},
-  {id:'proposta',   label:'Proposta Enviada',  color:'#C4A97D'},
-  {id:'confirmado', label:'Confirmado',        color:'#2D7A4F'},
-  {id:'demitido',   label:'Demitido',          color:'#B03A2E'},
+  {id:'novo',      label:'Novo Lead',         color:'#6BA3D6'},
+  {id:'contato',   label:'Em Contato',        color:'#F0A830'},
+  {id:'followup',  label:'Follow Up',         color:'#A87ED4'},
+  {id:'fechado',   label:'Mentoria Fechada',  color:'#2D7A4F'},
+  {id:'perdido',   label:'Perdido',           color:'#E06060'},
+  {id:'demitido',  label:'Demitido',          color:'#B03A2E'},
 ];
-// Kanban "Todos" — view unificada
 const STAGES_TODOS = [
-  {id:'novo',       label:'Novo Lead',         color:'#6BA3D6'},
-  {id:'contato',    label:'Em Contato',        color:'#F0A830'},
-  {id:'followup',   label:'Follow Up',         color:'#A87ED4'},
-  {id:'consulta',   label:'Consulta Agendada', color:'#4CAF7D'},
-  {id:'proposta',   label:'Proposta',          color:'#C4A97D'},
-  {id:'confirmado', label:'Confirmado ✓',      color:'#2D7A4F'},
-  {id:'demitido',   label:'Demitido',          color:'#B03A2E'},
+  {id:'novo',      label:'Novo Lead',         color:'#6BA3D6'},
+  {id:'contato',   label:'Em Contato',        color:'#F0A830'},
+  {id:'followup',  label:'Follow Up',         color:'#A87ED4'},
+  {id:'consulta',  label:'Consulta Agendada', color:'#4CAF7D'},
+  {id:'fechado',   label:'Mentoria Fechada',  color:'#2D7A4F'},
+  {id:'perdido',   label:'Perdido',           color:'#E06060'},
+  {id:'demitido',  label:'Demitido',          color:'#B03A2E'},
+];
+
+// Motivos de perda
+const MOTIVOS_PERDA = [
+  {id:'sem_resposta',    label:'📵 Parou de responder'},
+  {id:'outro_prof',      label:'👩‍⚕️ Escolheu outro profissional'},
+  {id:'preco',           label:'💰 Preço fora do orçamento'},
+  {id:'outro',           label:'📝 Outro motivo'},
 ];
 
 const ORIGINS = {
@@ -966,6 +1004,7 @@ function dbToLead(r){
     potencialInicial:parseFloat(r.potencial_inicial||0),
     stage:r.stage||'novo', fuLevel:r.fu_level||1, temp:r.temp||'cold',
     consultaResult:r.consulta_result||null, jaConsultou:r.ja_consultou||false,
+    motivoPerda:r.motivo_perda||null, motivoPerdaObs:r.motivo_perda_obs||null,
     obs:r.obs||'', createdAt:r.created_at, updatedAt:r.updated_at,
     clinic_id:r.clinic_id,
   };
@@ -977,6 +1016,7 @@ function leadToDb(l){
     services:l.services||[], potencial_inicial:l.potencialInicial||0,
     stage:l.stage||'novo', fu_level:l.fuLevel||1, temp:l.temp||'cold',
     consulta_result:l.consultaResult||null, ja_consultou:l.jaConsultou||false,
+    motivo_perda:l.motivoPerda||null, motivo_perda_obs:l.motivoPerdaObs||null,
     obs:l.obs||null, created_at:l.createdAt, updated_at:l.updatedAt||new Date().toISOString(),
   };
 }
@@ -1193,11 +1233,15 @@ function renderCard(l){
   }
 
   let tags='';
-  if(l.consultaResult==='sim') tags+=`<span class="tag tag-consulta-sim">✓ ok</span>`;
-  if(l.consultaResult==='nao') tags+=`<span class="tag tag-consulta-nao">✗ não compareceu</span>`;
-  if(l.jaConsultou) tags+=`<span class="tag tag-ja-consultou">↩ já consultou</span>`;
-  // No "todos" e "confirmado": mostrar tipo com ícone
-  if(kanbanFilter==='todos'&&l.stage==='confirmado'){
+  if(l.consultaResult==='sim') tags+=`<span class="tag tag-consulta-sim">✓ Confirmou presença</span>`;
+  if(l.consultaResult==='nao') tags+=`<span class="tag tag-consulta-nao">✗ Não compareceu</span>`;
+  if(l.jaConsultou) tags+=`<span class="tag tag-ja-consultou">↩ Já consultou</span>`;
+  if(l.stage==='perdido'){
+    const m=MOTIVOS_PERDA.find(x=>x.id===l.motivoPerda);
+    tags+=`<span class="tag tag-perdido">${m?m.label:'Perdido'}</span>`;
+  }
+  if(l.stage==='fechado'&&l.type==='mentoria') tags+=`<span class="tag tag-fechado">✓ Mentoria fechada</span>`;
+  if(kanbanFilter==='todos'&&['consulta','fechado'].includes(l.stage)){
     tags+=l.type==='mentoria'
       ?`<span class="tag tag-mentoria">🎓 Mentoria</span>`
       :`<span class="tag tag-consulta-sim">🏥 Procedimento</span>`;
@@ -1484,11 +1528,14 @@ async function openDetail(id){
     ${S.role==='adm'&&l.potencialInicial>0?`<div class="info-row"><span class="info-k">Potencial Inicial</span><span class="info-v" style="color:var(--green)">R$ ${parseFloat(l.potencialInicial).toLocaleString('pt-BR',{minimumFractionDigits:2})}</span></div>`:''}
     <div class="info-row"><span class="info-k">Cadastrado</span><span class="info-v">${fmtFull(l.createdAt)}</span></div>
     ${l.obs?`<div style="margin-top:12px"><div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">Observações</div><div style="background:var(--surface2);border-radius:var(--radius-xs);padding:10px 12px;font-size:12px;color:var(--text2);line-height:1.5">${l.obs}</div></div>`:''}
+    ${l.stage==='perdido'?`<div style="margin-top:12px;background:var(--red-bg);border-radius:var(--radius-xs);padding:10px 12px;border:1px solid var(--red)"><div style="font-size:11px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">Motivo da Perda</div><div style="font-size:12px;color:var(--red)">${MOTIVOS_PERDA.find(m=>m.id===l.motivoPerda)?.label||l.motivoPerda||'–'}${l.motivoPerdaObs?`<br><span style="opacity:.8">${l.motivoPerdaObs}</span>`:''}</div></div>`:''}
   `;
   const nextStage=getNextStage(l);
-  const canAdvance=nextStage!==null;
+  const canAdvance=nextStage!==null && nextStage.id!=='perdido';
+  const canPerdido = !['perdido','demitido'].includes(l.stage);
   document.getElementById('detail-foot').innerHTML=`
     <button class="btn btn-danger btn-sm" onclick="deleteLead_confirm('${id}')">Excluir</button>
+    ${canPerdido?`<button class="btn btn-sm" style="background:var(--red-bg);color:var(--red);border:1px solid var(--red)" onclick="openPerdido('${id}')">📵 Perdido</button>`:''}
     <button class="btn btn-ghost btn-sm" onclick="closeOv('ov-detail')">Fechar</button>
     <button class="btn btn-ghost btn-sm" onclick="editLead('${id}')">Editar</button>
     ${canAdvance?`<button class="btn btn-primary btn-sm" onclick="advanceStage('${id}')">Avançar → ${nextStage.label}</button>`:''}
@@ -1501,17 +1548,16 @@ async function setConsulta(id, result){
   const l=leads.find(x=>x.id===id);
   if(!l) return;
   l.consultaResult=result;
-  if(result==='sim'){
-    l.stage='confirmado';
-  } else {
+  if(result==='nao'){
     l.stage='followup';
     l.jaConsultou=true;
   }
+  // se sim: lead permanece em 'consulta' (consulta agendada = confirmado para proc)
   l.updatedAt=now();
   await upsertLead(l);
   closeOv('ov-detail');
   await renderKanban();
-  showToast(result==='sim'?'✓ Confirmado!':'Lead voltou para Follow Up');
+  showToast(result==='sim'?'✓ Consulta confirmada!':'Lead voltou para Follow Up');
 }
 
 async function advanceFU(event, id, level){
@@ -1609,8 +1655,10 @@ async function renderDashboard(){
   const hjAll=filterByPeriod(allLeadsRaw).filter(l=>new Date(l.createdAt||l.created_at).toDateString()===hoje).length;
 
   const total=leads.length;
-  const confirmados=leads.filter(l=>l.stage==='confirmado').length;
-  const conv=total>0?Math.round(confirmados/total*100):0;
+  const consultados=leads.filter(l=>l.stage==='consulta').length;
+  const fechados=leads.filter(l=>l.stage==='fechado').length; // mentoria fechada
+  const perdidos=leads.filter(l=>l.stage==='perdido').length;
+  const conv=total>0?Math.round((consultados+fechados)/total*100):0;
   const fuCount=leads.filter(l=>l.stage==='followup').length;
 
   // Potencial Inicial = soma dos procedimentos selecionados pelos leads ativos
@@ -1618,14 +1666,20 @@ async function renderDashboard(){
   const activeLeads=leads.filter(l=>activeStages.includes(l.stage));
   const potInicialTotal=activeLeads.reduce((s,l)=>s+(l.potencialInicial||0),0);
 
-  // Potencial Real = ticket médio × leads que chegaram em Consulta Agendada (ou confirmado)
-  const consultaStages=['consulta','confirmado'];
+  // Potencial Real = ticket médio × leads em consulta agendada ou mentoria fechada
+  const consultaStages=['consulta','fechado'];
   const leadsComConsulta=leads.filter(l=>consultaStages.includes(l.stage)||l.consultaResult==='sim');
   const ticketRef=dashFilter==='mentoria'?tickets.ment:tickets.proc;
   const potReal=ticketRef>0?leadsComConsulta.length*ticketRef:0;
 
-  // Receita: não temos mais campo value — usar potencialInicial dos confirmados como proxy
-  const rec=leads.filter(l=>l.stage==='confirmado').reduce((s,l)=>s+(l.potencialInicial||0),0);
+  // Perdidos por motivo
+  const perdidosPorMotivo={};
+  leads.filter(l=>l.stage==='perdido').forEach(l=>{
+    const m=l.motivoPerda||'outro';
+    perdidosPorMotivo[m]=(perdidosPorMotivo[m]||0)+1;
+  });
+
+  const rec=leads.filter(l=>l.stage==='consulta').reduce((s,l)=>s+(l.potencialInicial||0),0);
 
   // Origins
   const oriCnt={};
@@ -1647,19 +1701,18 @@ async function renderDashboard(){
   leads.forEach(l=>{
     if(!l.att)return;
     attCnt[l.att]=(attCnt[l.att]||0)+1;
-    if(l.stage==='confirmado')attFch[l.att]=(attFch[l.att]||0)+1;
+    if(['consulta','fechado'].includes(l.stage))attFch[l.att]=(attFch[l.att]||0)+1;
   });
   const attList=Object.entries(attCnt).sort((a,b)=>b[1]-a[1]).slice(0,5);
   const maxAtt=attList[0]?.[1]||1;
 
   // Negociação breakdown by stage
   const negStages=[
-    {id:'novo',label:'Novos',color:'#6BA3D6'},
-    {id:'contato',label:'Em Contato',color:'#F0A830'},
-    {id:'followup',label:'Follow Up',color:'#A87ED4'},
-    {id:'consulta',label:'Consulta Agendada',color:'#4CAF7D'},
-    {id:'orcamento',label:'Orçamento',color:'#C4A97D'},
-    {id:'proposta',label:'Proposta',color:'#6BA3D6'},
+    {id:'novo',     label:'Novos',             color:'#6BA3D6'},
+    {id:'contato',  label:'Em Contato',        color:'#F0A830'},
+    {id:'followup', label:'Follow Up',         color:'#A87ED4'},
+    {id:'consulta', label:'Consulta Agendada', color:'#4CAF7D'},
+    {id:'fechado',  label:'Mentoria Fechada',  color:'#2D7A4F'},
   ];
   const negBreakdown=negStages.map(s=>({...s,n:activeLeads.filter(l=>l.stage===s.id).length})).filter(s=>s.n>0);
   const maxNeg=Math.max(...negBreakdown.map(s=>s.n),1);
@@ -1674,9 +1727,14 @@ async function renderDashboard(){
         <div class="ds-delta">+${hjAll} hoje</div>
       </div>
       <div class="dash-stat">
-        <div class="ds-val" style="color:var(--green)">${confirmados}</div>
-        <div class="ds-lbl">Confirmados</div>
+        <div class="ds-val" style="color:var(--green)">${consultados+fechados}</div>
+        <div class="ds-lbl">${dashFilter==='mentoria'?'Mentorias fechadas':'Consultas agendadas'}</div>
         <div class="ds-delta">${conv}% conversão</div>
+      </div>
+      <div class="dash-stat">
+        <div class="ds-val" style="color:var(--red)">${perdidos}</div>
+        <div class="ds-lbl">Perdidos</div>
+        <div class="ds-delta">${total>0?Math.round(perdidos/total*100):0}% do total</div>
       </div>
       <div class="dash-stat">
         <div class="ds-val" style="color:var(--amber)">${fuCount}</div>
@@ -1724,6 +1782,20 @@ async function renderDashboard(){
       </div>`:''}
     </div>
 
+    ${perdidos>0?`
+    <div class="dash-card" style="margin-bottom:12px;border-color:var(--red)">
+      <div class="dash-card-title" style="color:var(--red)">Leads Perdidos — ${perdidos} no período</div>
+      ${MOTIVOS_PERDA.map(m=>{
+        const n=perdidosPorMotivo[m.id]||0;
+        const pct=perdidos>0?Math.round(n/perdidos*100):0;
+        return `<div class="bar-row">
+          <span class="bar-lbl">${m.label}</span>
+          <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:var(--red)"></div></div>
+          <span class="bar-n">${n}</span>
+        </div>`;
+      }).join('')}
+    </div>`:''}
+
     <div class="dash-2col">
       <div class="dash-card">
         <div class="dash-card-title">Origem dos Leads</div>
@@ -1763,7 +1835,7 @@ async function renderDashboard(){
         <div class="rank-item" style="background:var(--accent-light);border:1px solid var(--accent)">
           <span class="rank-pos">👤</span>
           <span class="rank-name">${S.display}</span>
-          <span class="rank-stat">${total} leads · ${leads.filter(l=>l.stage==='confirmado').length} confirmados</span>
+          <span class="rank-stat">${total} leads · ${leads.filter(l=>['consulta','fechado'].includes(l.stage)).length} convertidos</span>
         </div>
         <div style="margin-top:10px;font-size:11px;color:var(--text3)">
           <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)">
@@ -1945,7 +2017,44 @@ async function deleteUser(idx){
   showToast('Usuário excluído');
 }
 
-// ── Trocar senha própria ──
+// ── Modal Perdido ──
+let _perdidoLeadId = null;
+let _perdidoMotivo = null;
+
+function openPerdido(id){
+  _perdidoLeadId = id;
+  _perdidoMotivo = null;
+  document.querySelectorAll('.motivo-btn').forEach(b=>b.classList.remove('sel'));
+  document.getElementById('motivo-outro-wrap').style.display='none';
+  document.getElementById('motivo-outro-txt').value='';
+  closeOv('ov-detail');
+  openOv('ov-perdido');
+}
+function selMotivo(el, motivo){
+  document.querySelectorAll('.motivo-btn').forEach(b=>b.classList.remove('sel'));
+  el.classList.add('sel');
+  _perdidoMotivo = motivo;
+  document.getElementById('motivo-outro-wrap').style.display = motivo==='outro' ? 'block' : 'none';
+}
+async function confirmarPerdido(){
+  if(!_perdidoMotivo){showToast('⚠ Selecione o motivo');return}
+  const outroTxt = document.getElementById('motivo-outro-txt').value.trim();
+  if(_perdidoMotivo==='outro' && !outroTxt){showToast('⚠ Descreva o motivo');return}
+  const leads = await getLeads();
+  const l = leads.find(x=>x.id===_perdidoLeadId);
+  if(!l) return;
+  l.stage = 'perdido';
+  l.motivoPerda = _perdidoMotivo;
+  l.motivoPerdaObs = outroTxt || null;
+  l.updatedAt = now();
+  await upsertLead(l);
+  closeOv('ov-perdido');
+  await renderKanban();
+  const label = MOTIVOS_PERDA.find(m=>m.id===_perdidoMotivo)?.label || _perdidoMotivo;
+  showToast(`Lead marcado como perdido — ${label}`);
+  _perdidoLeadId = null;
+  _perdidoMotivo = null;
+}
 function openTrocarSenha(){
   ['senha-atual','senha-nova','senha-conf'].forEach(id=>document.getElementById(id).value='');
   openOv('ov-senha');
